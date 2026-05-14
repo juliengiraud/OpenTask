@@ -1,4 +1,4 @@
-package com.example.androidtaskapp
+package com.example.androidtaskapp.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -9,6 +9,8 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.example.androidtaskapp.R
+import com.example.androidtaskapp.ui.PopupActivity
 
 class TaskService : Service() {
 
@@ -63,7 +65,7 @@ class TaskService : Service() {
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("My task app title")
             .setContentText("Current tasks done $taskCount/$totalTasks")
-            .setSmallIcon(R.drawable.ic_home) // Using existing icon
+            .setSmallIcon(R.drawable.ic_home)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -76,6 +78,6 @@ class TaskService : Service() {
     }
 
     companion object {
-        const val ACTION_INCREMENT = "com.example.androidtaskapp.ACTION_INCREMENT"
+        const val ACTION_INCREMENT = "com.example.androidtaskapp.service.ACTION_INCREMENT"
     }
 }

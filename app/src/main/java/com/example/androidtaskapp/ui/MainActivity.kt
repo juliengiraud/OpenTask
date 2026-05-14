@@ -1,4 +1,4 @@
-package com.example.androidtaskapp
+package com.example.androidtaskapp.ui
 
 import android.Manifest
 import android.content.Intent
@@ -9,7 +9,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -22,9 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.core.content.ContextCompat
+import com.example.androidtaskapp.R
+import com.example.androidtaskapp.service.TaskService
 import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
 import kotlinx.coroutines.launch
 
