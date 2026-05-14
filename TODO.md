@@ -4,18 +4,18 @@ This project should replace the usage of ColorNote
 
 ## Features
 
-- [ ] Infinite notification with
-  - [ ] title
+- [/] Infinite notification with
+  - [/] title
     - [ ] icon
-    - [ ] text
-  - [ ] button
-    - [ ] open Modal overview
+    - [/] text
+  - [x] button
+    - [x] open Modal overview => still modal to be done
   - [ ] real time update
     - [ ] schedule refresh
     - [ ] sync with Obsidian
   - [ ] same style
-- [ ] Modal overview
-  - [ ] window displayed over current app with transparent background
+- [/] Modal overview
+  - [/] window displayed over current app with transparent background
   - [ ] title
   - [ ] list of items
     - [ ] text
@@ -102,8 +102,8 @@ This project should replace the usage of ColorNote
   - [ ] cancel/validate buttons
     - [ ] save changes to obsidian
   - [ ] same style
-- [ ] Calendar view => native calendars ?
-  - [ ] swipe to open All notes view
+- [/] Calendar view => native calendars ?
+  - [/] swipe to open All notes view
   - [ ] header with text
   - [ ] sub header
     - [ ] previous month button
@@ -116,14 +116,14 @@ This project should replace the usage of ColorNote
       - [ ] a square for each task in the selected color
       - [ ] click on day open Modal overview with 0 opacity in background
   - [ ] same style
-- [ ] All notes view
-  - [ ] swipe to open Calendar view
+- [/] All notes view
+  - [/] swipe to open Calendar view
   - [ ] list notes
     - [ ] *flashlist instead of flatlist for perf
     - [ ] name / type / date
   - [ ] sort filters
   - [ ] same style
-- [ ] bottom menu
+- [/] bottom menu
   - [ ] all notes icon
   - [ ] calendar icon
   - [ ] search button
