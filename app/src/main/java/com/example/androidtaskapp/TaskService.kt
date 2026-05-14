@@ -49,14 +49,14 @@ class TaskService : Service() {
     }
 
     private fun createNotification(): Notification {
-        val incrementIntent = Intent(this, TaskService::class.java).apply {
-            action = ACTION_INCREMENT
+        val popupIntent = Intent(this, PopupActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         
-        val pendingIntent = PendingIntent.getService(
+        val pendingIntent = PendingIntent.getActivity(
             this,
             0,
-            incrementIntent,
+            popupIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
