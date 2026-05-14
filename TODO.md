@@ -1,0 +1,137 @@
+# Todo
+
+This project should replace the usage of ColorNote
+
+## Features
+
+- [ ] Infinite notification with
+  - [ ] title
+    - [ ] icon
+    - [ ] text
+  - [ ] button
+    - [ ] open Modal overview
+  - [ ] real time update
+    - [ ] schedule refresh
+    - [ ] sync with Obsidian
+  - [ ] same style
+- [ ] Modal overview
+  - [ ] window displayed over current app with transparent background
+  - [ ] title
+  - [ ] list of items
+    - [ ] text
+      - [ ] action click
+        - [ ] open Task view
+    - [ ] cross icon button
+      - [ ] mark task as done
+  - [ ] quick add button
+    - [ ] create new task & open it
+  - [ ] same style
+- [ ] Task view
+  - [ ] header
+    - [ ] back button
+      - [ ] call back action command
+    - [ ] task title
+    - [ ] edit button
+      - [ ] enter Task edit
+    - [ ] options icon
+      - [ ] click show options items
+        - [ ] done => mark as done
+        - [ ] calendar => open Date settings view
+        - [ ] research => open Search bar
+          - [ ] enable sticky bar with input focus on bottom of screen
+          - [ ] text input trigger background+color change to matching text
+          - [ ] go to previous occurence button
+          - [ ] go to next button
+        - [ ] delete => open Delete confirm dialog
+          - [ ] modal with transparent background
+          - [ ] title
+          - [ ] text
+          - [ ] 2 buttons
+          - [ ] delete action on yes
+  - [ ] sub header
+    - [ ] text with last update or created at
+    - [ ] date
+      - [ ] click open Date settings view
+  - [ ] task content
+    - [ ] display task content
+    - [ ] double tap action
+      - [ ] enter Task edit:
+        - [ ] header changes
+          - [ ] back button become validate edit => click go back to view
+          - [ ] title become editable and background change
+          - [ ] edit button become color picker icon
+            - [ ] click open color picker modal with transparent background
+            - [ ] color picker is a 3*3 grid of colored squares
+            - [ ] click on color update selected color in picker icon
+            - [ ] save it to obsidian
+        - [ ] sub header changes
+          - [ ] created at become "editing"
+  - [ ] same style
+- [ ] Date settings view
+  - [ ] header
+    - [ ] go back button
+    - [ ] title
+  - [ ] sub header
+    - [ ] if passed
+      - [ ] display passed
+      - [ ] put reset button
+      - [ ] click set date to today => exit this statement
+      - [ ] show disabled inputs on date form
+  - [ ] date form
+    - [ ] text type
+    - [ ] dropdown date/time
+    - [ ] text when
+    - [ ] relative dates button
+      - [ ] transparent modal
+      - [ ] yesterday
+      - [ ] tomorrow
+    - [ ] calendar date button
+      - [ ] transparent modal
+      - [ ] current year & date
+      - [ ] basic date selector
+      - [ ] validate/cancel buttons
+    - [ ] time button if time is selected
+    - [ ] text repeat frequency
+    - [ ] dropdown mode
+      - [ ] unique
+      - [ ] everyday
+      - [ ] every week, this day
+      - [ ] every 2 weeks, this day
+      - [ ] every month, closest to this day in month
+      - [ ] every year, this date
+  - [ ] cancel/validate buttons
+    - [ ] save changes to obsidian
+  - [ ] same style
+- [ ] Calendar view => native calendars ?
+  - [ ] swipe to open All notes view
+  - [ ] header with text
+  - [ ] sub header
+    - [ ] previous month button
+    - [ ] current month
+    - [ ] next month button
+  - [ ] week days names header
+  - [ ] all month rows
+    - [ ] daily cards
+      - [ ] number of the day
+      - [ ] a square for each task in the selected color
+      - [ ] click on day open Modal overview with 0 opacity in background
+  - [ ] same style
+- [ ] All notes view
+  - [ ] swipe to open Calendar view
+  - [ ] list notes
+    - [ ] *flashlist instead of flatlist for perf
+    - [ ] name / type / date
+  - [ ] sort filters
+  - [ ] same style
+- [ ] bottom menu
+  - [ ] all notes icon
+  - [ ] calendar icon
+  - [ ] search button
+    - [ ] open search bar on top with focus
+    - [ ] clear search button when text in
+    - [ ] historic display
+      - [ ] icon, text, delete cross
+    - [ ] results
+  - [ ] options icon
+  - [ ] create icon
+  - [ ] same style
