@@ -16,7 +16,7 @@ class TaskService : Service() {
 
     private var taskCount = 0
     private val totalTasks = 5
-    private val channelId = "task_channel"
+    private val channelId = "task_channel_v2"
     private val notificationId = 1
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -41,7 +41,7 @@ class TaskService : Service() {
             val channel = NotificationChannel(
                 channelId,
                 "Task Notifications",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Shows task progress"
             }
@@ -52,12 +52,12 @@ class TaskService : Service() {
 
     private fun createNotification(): Notification {
         val popupIntent = Intent(this, PopupActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         
         val pendingIntent = PendingIntent.getActivity(
             this,
-            0,
+            (System.currentTimeMillis() % Int.MAX_VALUE).toInt(),
             popupIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -68,7 +68,7 @@ class TaskService : Service() {
             .setSmallIcon(R.drawable.ic_home)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
     }
 
