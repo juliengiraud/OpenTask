@@ -35,6 +35,17 @@ class TaskService : Service() {
         }
         return START_STICKY
     }
+    private fun sendDebugLog(message: String) {
+        val intent = Intent(ACTION_DEBUG_LOG).apply {
+            putExtra(EXTRA_LOG_MESSAGE, message)
+        }
+        sendBroadcast(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        sendDebugLog("Service destroyed, stopped watching")
+    }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -47,6 +58,7 @@ class TaskService : Service() {
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
+            sendDebugLog("Notification channel created")
         }
     }
 
@@ -79,5 +91,6 @@ class TaskService : Service() {
 
     companion object {
         const val ACTION_INCREMENT = "com.example.androidtaskapp.service.ACTION_INCREMENT"
+        const val ACTION_DEBUG_LOG = "com.example.androidtaskapp.service.ACTION_DEBUG_LOG"
     }
 }
