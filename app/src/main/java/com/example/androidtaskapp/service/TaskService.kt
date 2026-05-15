@@ -5,18 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
-import android.database.ContentObserver
-import android.net.Uri
-import android.os.Build
-import android.os.FileObserver
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.documentfile.provider.DocumentFile
 import com.example.androidtaskapp.R
 import com.example.androidtaskapp.ui.PopupActivity
 
@@ -27,28 +19,15 @@ class TaskService : Service() {
     private val channelId = "task_channel_v5"
     private val notificationId = 1
     
-    private var fileMetadataMap = mutableMapOf<String, Long>()
-    private var lastEventInfo = "No changes yet"
-    
-    private var folderContentObserver: ContentObserver? = null
-    private val pollingHandler = Handler(Looper.getMainLooper())
-    private var currentWatchedUri: Uri? = null
-
-    private val pollRunnable = object : Runnable {
-        override fun run() {
-            currentWatchedUri?.let {
-                scanFolder(it, showPush = true)
-            }
-            pollingHandler.postDelayed(this, 5000) 
-        }
-    }
+    private lateinit var folderWatcher: FolderWatcher
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        sendDebugLog("Service Created")
+        folderWatcher = FolderWatcher(this, channelId) { updateNotification() }
+        Log.d("TaskService", "Service Created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -56,146 +35,40 @@ class TaskService : Service() {
             ACTION_INCREMENT -> {
                 taskCount++
                 updateNotification()
-                sendDebugLog("Incremented taskCount to $taskCount")
+                Log.d("TaskService", "Incremented taskCount to $taskCount")
             }
             ACTION_UPDATE_WATCHED_FOLDER -> {
                 val folderUri = intent.getStringExtra(EXTRA_FOLDER_URI)
-                setupWatcher(folderUri)
+                folderWatcher.setupWatcher(folderUri)
             }
             ACTION_RESET_WATCHER -> {
-                sendDebugLog("Watcher reset.")
-                setupWatcher(null)
-                fileMetadataMap.clear()
-                lastEventInfo = "Watcher reset"
-                updateNotification()
+                folderWatcher.reset()
             }
             else -> {
-                val folderUri = getSharedPreferences("settings", Context.MODE_PRIVATE)
+                val folderUri = getSharedPreferences("settings", MODE_PRIVATE)
                     .getString("watched_folder", null)
-                setupWatcher(folderUri)
+                folderWatcher.setupWatcher(folderUri)
                 startForeground(notificationId, createNotification())
             }
         }
         return START_STICKY
     }
 
-    private fun setupWatcher(folderUriString: String?) {
-        folderContentObserver?.let { contentResolver.unregisterContentObserver(it) }
-        folderContentObserver = null
-        pollingHandler.removeCallbacks(pollRunnable)
-        currentWatchedUri = null
-
-        if (folderUriString == null) return
-
-        val uri = Uri.parse(folderUriString)
-        currentWatchedUri = uri
-        sendDebugLog("Monitoring: $uri")
-
-        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean, updatedUri: Uri?) {
-                sendDebugLog("System event triggered scan")
-                scanFolder(uri, showPush = true)
-            }
-        }
-        contentResolver.registerContentObserver(uri, true, observer)
-        folderContentObserver = observer
-        
-        scanFolder(uri, showPush = false) // Initial state
-        pollingHandler.postDelayed(pollRunnable, 5000)
-    }
-
-    private fun scanFolder(treeUri: Uri, showPush: Boolean) {
-        try {
-            val folder = DocumentFile.fromTreeUri(this, treeUri)
-            val currentFiles = folder?.listFiles() ?: emptyArray()
-            
-            val newMetadata = mutableMapOf<String, Long>()
-            var changeDetected = false
-
-            for (file in currentFiles) {
-                val name = file.name ?: "Unknown"
-                val lastModified = file.lastModified()
-                newMetadata[name] = lastModified
-
-                if (!fileMetadataMap.containsKey(name)) {
-                    if (showPush && fileMetadataMap.isNotEmpty()) {
-                        lastEventInfo = "Created: $name"
-                        sendDebugLog(lastEventInfo)
-                        showPushNotification("File Created", name)
-                        changeDetected = true
-                    }
-                } else if (fileMetadataMap[name]!! < lastModified) {
-                    if (showPush) {
-                        lastEventInfo = "Updated: $name"
-                        sendDebugLog(lastEventInfo)
-                        showPushNotification("File Updated", name)
-                        changeDetected = true
-                    }
-                }
-            }
-
-            // Detect Deletions
-            for (oldName in fileMetadataMap.keys) {
-                if (!newMetadata.containsKey(oldName)) {
-                    if (showPush) {
-                        lastEventInfo = "Deleted: $oldName"
-                        sendDebugLog(lastEventInfo)
-                        showPushNotification("File Deleted", oldName)
-                        changeDetected = true
-                    }
-                }
-            }
-
-            if (changeDetected || fileMetadataMap.isEmpty()) {
-                fileMetadataMap.clear()
-                fileMetadataMap.putAll(newMetadata)
-                updateNotification()
-            }
-            
-        } catch (e: Exception) {
-            sendDebugLog("Scan Error: ${e.message}")
-        }
-    }
-
-    private fun showPushNotification(title: String, text: String) {
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        val pushNotification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setSmallIcon(R.drawable.ic_home)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
-        notificationManager.notify(notificationId + 1, pushNotification)
-    }
-
-    private fun sendDebugLog(message: String) {
-        Log.d("TaskService", message)
-        val intent = Intent(ACTION_DEBUG_LOG).apply {
-            setPackage(packageName)
-            putExtra(EXTRA_LOG_MESSAGE, message)
-        }
-        sendBroadcast(intent)
-    }
-
     override fun onDestroy() {
         super.onDestroy()
-        pollingHandler.removeCallbacks(pollRunnable)
-        folderContentObserver?.let { contentResolver.unregisterContentObserver(it) }
+        folderWatcher.stop()
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Task Notifications",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Shows task progress"
-            }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            channelId,
+            "Task Notifications",
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = "Shows task progress"
         }
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
     }
 
     private fun createNotification(): Notification {
@@ -212,7 +85,7 @@ class TaskService : Service() {
 
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("My task app title")
-            .setContentText("Done: $taskCount/$totalTasks | $lastEventInfo")
+            .setContentText("Done: $taskCount/$totalTasks | ${folderWatcher.lastEventInfo}")
             .setSmallIcon(R.drawable.ic_home)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
