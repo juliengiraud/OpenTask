@@ -86,7 +86,6 @@ class FolderWatcherManager(
                     if (showPush) {
                         lastEventInfo = "Updated: $name"
                         debugManager.log("FolderWatcherManager", lastEventInfo)
-                        notificationManager.showPushNotification("File Updated", name)
                         changeDetected = true
                     }
                 }
