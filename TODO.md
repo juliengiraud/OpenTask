@@ -10,8 +10,8 @@ This project should replace the usage of ColorNote
     - [/] text
   - [x] button
     - [x] open Modal overview => still modal to be done
-  - [ ] real time update
-    - [ ] schedule refresh
+  - [/] real time update
+    - [/] schedule refresh
     - [ ] sync with Obsidian
   - [ ] same style
 - [/] Modal overview
@@ -118,13 +118,12 @@ This project should replace the usage of ColorNote
   - [ ] same style
 - [/] All notes view
   - [/] swipe to open Calendar view
-  - [ ] list notes
-    - [ ] *flashlist instead of flatlist for perf
-    - [ ] name / type / date
-  - [ ] sort filters
-  - [ ] same style
+  - [/] list notes
+    - [/] name / type / date
+  - [/] sort filters
+  - [/] same style
 - [/] bottom menu
-  - [ ] all notes icon
+  - [x] all notes icon
   - [ ] calendar icon
   - [ ] search button
     - [ ] open search bar on top with focus

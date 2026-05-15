@@ -14,8 +14,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +29,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,16 +43,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import com.example.androidtaskapp.R
+import com.example.androidtaskapp.model.Task
 import com.example.androidtaskapp.service.MainService
 import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
 
 class MainActivity : ComponentActivity() {
 
@@ -105,7 +115,6 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(debugReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
-            // No flag needed for older versions, or can use 0
             registerReceiver(debugReceiver, filter)
         }
 
@@ -183,7 +192,28 @@ fun AndroidTaskAppApp(
             }
         }
     ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                val currentDestination = AppDestinations.entries[pagerState.currentPage]
+                // Top panel - now static
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .shadow(elevation = 4.dp)
+                        .zIndex(1f)
+                        .background(Color(0xFFD6D6D6)) // Lighter grey
+                        .padding(start = 16.dp, end = 16.dp, bottom = 4.dp, top = 16.dp),
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    Text(
+                        text = "Hello ${currentDestination.label}",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                }
+            }
+        ) { innerPadding ->
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -192,7 +222,7 @@ fun AndroidTaskAppApp(
             ) { pageIndex ->
                 val destination = AppDestinations.entries[pageIndex]
                 when (destination) {
-                    AppDestinations.HOME -> Greeting("Home", Modifier.fillMaxSize())
+                    AppDestinations.HOME -> NotesScreen(Modifier.fillMaxSize())
                     AppDestinations.FAVORITES -> Greeting("Favorites", Modifier.fillMaxSize())
                     AppDestinations.SETTINGS -> SettingsScreen(
                         onSelectFolder = onSelectFolder,
@@ -202,6 +232,60 @@ fun AndroidTaskAppApp(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun NotesScreen(modifier: Modifier = Modifier) {
+    val mockTasks = remember {
+        val dueDate = LocalDateTime.of(2026, 5, 14, 0, 0)
+        listOf(
+            Task(title = "Courses", textContent = "Courses", dueDate = dueDate),
+            Task(title = "Plantes", textContent = "Plantes", dueDate = dueDate),
+            Task(title = "Sortie Magda", textContent = "Sortie Magda", dueDate = dueDate)
+        )
+    }
+
+    Column(
+        modifier = modifier
+            .background(Color(0xFFEEEEEE)) // Light grey background
+            .padding(8.dp)
+    ) {
+        // Filters panel
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFE0E0E0)) // More grey than background
+                .padding(2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "Filters", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Task list
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
+        ) {
+            items(mockTasks) { task ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White) // Background for each task row
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = task.title, style = MaterialTheme.typography.bodyLarge)
+                    Checkbox(checked = task.isDone, onCheckedChange = { })
+                }
+                Spacer(modifier = Modifier.height(4.dp))
             }
         }
     }
@@ -256,7 +340,7 @@ enum class AppDestinations(
     val label: String,
     val icon: Int,
 ) {
-    HOME("Home", R.drawable.ic_home),
+    HOME("Notes", R.drawable.ic_event),
     FAVORITES("Favorites", R.drawable.ic_favorite),
     SETTINGS("Settings", R.drawable.ic_settings),
 }
