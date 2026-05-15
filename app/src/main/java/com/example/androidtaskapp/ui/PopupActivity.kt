@@ -20,7 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.androidtaskapp.service.TaskService
+import com.example.androidtaskapp.service.MainService
 import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
 
 class PopupActivity : ComponentActivity() {
@@ -29,8 +29,8 @@ class PopupActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Increment task count via service
-        val incrementIntent = Intent(this, TaskService::class.java).apply {
-            action = TaskService.ACTION_INCREMENT
+        val incrementIntent = Intent(this, MainService::class.java).apply {
+            action = MainService.ACTION_INCREMENT
         }
         startService(incrementIntent)
 

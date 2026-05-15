@@ -13,7 +13,7 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.example.androidtaskapp.R
 
-class FolderWatcher(
+class FolderManager(
     private val context: Context,
     private val channelId: String,
     private val onStatusChanged: () -> Unit,
@@ -150,10 +150,10 @@ class FolderWatcher(
     }
 
     private fun sendDebugLog(message: String) {
-        Log.d("FolderWatcher", message)
-        val intent = Intent(TaskService.ACTION_DEBUG_LOG).apply {
+        Log.d("FolderManager", message)
+        val intent = Intent(MainService.ACTION_DEBUG_LOG).apply {
             setPackage(context.packageName)
-            putExtra(TaskService.EXTRA_LOG_MESSAGE, message)
+            putExtra(MainService.EXTRA_LOG_MESSAGE, message)
         }
         context.sendBroadcast(intent)
     }

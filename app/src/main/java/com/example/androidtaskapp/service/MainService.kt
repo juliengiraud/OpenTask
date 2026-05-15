@@ -12,22 +12,22 @@ import androidx.core.app.NotificationCompat
 import com.example.androidtaskapp.R
 import com.example.androidtaskapp.ui.PopupActivity
 
-class TaskService : Service() {
+class MainService : Service() {
 
     private var taskCount = 0
     private val totalTasks = 5
     private val channelId = "task_channel_v5"
     private val notificationId = 1
     
-    private lateinit var folderWatcher: FolderWatcher
+    private lateinit var folderManager: FolderManager
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        folderWatcher = FolderWatcher(this, channelId) { updateNotification() }
-        Log.d("TaskService", "Service Created")
+        folderManager = FolderManager(this, channelId) { updateNotification() }
+        Log.d("MainService", "Service Created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -35,19 +35,19 @@ class TaskService : Service() {
             ACTION_INCREMENT -> {
                 taskCount++
                 updateNotification()
-                Log.d("TaskService", "Incremented taskCount to $taskCount")
+                Log.d("MainService", "Incremented taskCount to $taskCount")
             }
             ACTION_UPDATE_WATCHED_FOLDER -> {
                 val folderUri = intent.getStringExtra(EXTRA_FOLDER_URI)
-                folderWatcher.setupWatcher(folderUri)
+                folderManager.setupWatcher(folderUri)
             }
             ACTION_RESET_WATCHER -> {
-                folderWatcher.reset()
+                folderManager.reset()
             }
             else -> {
                 val folderUri = getSharedPreferences("settings", MODE_PRIVATE)
                     .getString("watched_folder", null)
-                folderWatcher.setupWatcher(folderUri)
+                folderManager.setupWatcher(folderUri)
                 startForeground(notificationId, createNotification())
             }
         }
@@ -56,7 +56,7 @@ class TaskService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        folderWatcher.stop()
+        folderManager.stop()
     }
 
     private fun createNotificationChannel() {
@@ -85,7 +85,7 @@ class TaskService : Service() {
 
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("My task app title")
-            .setContentText("Done: $taskCount/$totalTasks | ${folderWatcher.lastEventInfo}")
+            .setContentText("Done: $taskCount/$totalTasks | ${folderManager.lastEventInfo}")
             .setSmallIcon(R.drawable.ic_home)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
@@ -99,11 +99,11 @@ class TaskService : Service() {
     }
 
     companion object {
-        const val ACTION_INCREMENT = "com.example.androidtaskapp.service.ACTION_INCREMENT"
-        const val ACTION_UPDATE_WATCHED_FOLDER = "com.example.androidtaskapp.service.ACTION_UPDATE_WATCHED_FOLDER"
-        const val ACTION_RESET_WATCHER = "com.example.androidtaskapp.service.ACTION_RESET_WATCHER"
-        const val EXTRA_FOLDER_URI = "com.example.androidtaskapp.service.EXTRA_FOLDER_URI"
-        const val ACTION_DEBUG_LOG = "com.example.androidtaskapp.service.ACTION_DEBUG_LOG"
-        const val EXTRA_LOG_MESSAGE = "com.example.androidtaskapp.service.EXTRA_LOG_MESSAGE"
+        const val ACTION_INCREMENT = "com.example.androidtaskapp.service.MainService.ACTION_INCREMENT"
+        const val ACTION_UPDATE_WATCHED_FOLDER = "com.example.androidtaskapp.service.MainService.ACTION_UPDATE_WATCHED_FOLDER"
+        const val ACTION_RESET_WATCHER = "com.example.androidtaskapp.service.MainService.ACTION_RESET_WATCHER"
+        const val EXTRA_FOLDER_URI = "com.example.androidtaskapp.service.MainService.EXTRA_FOLDER_URI"
+        const val ACTION_DEBUG_LOG = "com.example.androidtaskapp.service.MainService.ACTION_DEBUG_LOG"
+        const val EXTRA_LOG_MESSAGE = "com.example.androidtaskapp.service.MainService.EXTRA_LOG_MESSAGE"
     }
 }

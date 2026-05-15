@@ -45,7 +45,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.androidtaskapp.R
-import com.example.androidtaskapp.service.TaskService
+import com.example.androidtaskapp.service.MainService
 import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
 import kotlinx.coroutines.launch
 
@@ -60,8 +60,8 @@ class MainActivity : ComponentActivity() {
 
     private val debugReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == TaskService.ACTION_DEBUG_LOG) {
-                val message = intent.getStringExtra(TaskService.EXTRA_LOG_MESSAGE)
+            if (intent?.action == MainService.ACTION_DEBUG_LOG) {
+                val message = intent.getStringExtra(MainService.EXTRA_LOG_MESSAGE)
                 message?.let { addDebugLog(it) }
             }
         }
@@ -79,9 +79,9 @@ class MainActivity : ComponentActivity() {
             saveWatchedFolder(it.toString())
 
             // Notify service about folder change
-            val intent = Intent(this, TaskService::class.java).apply {
-                action = TaskService.ACTION_UPDATE_WATCHED_FOLDER
-                putExtra(TaskService.EXTRA_FOLDER_URI, it.toString())
+            val intent = Intent(this, MainService::class.java).apply {
+                action = MainService.ACTION_UPDATE_WATCHED_FOLDER
+                putExtra(MainService.EXTRA_FOLDER_URI, it.toString())
             }
             startService(intent)
         }
@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val filter = IntentFilter(TaskService.ACTION_DEBUG_LOG)
+        val filter = IntentFilter(MainService.ACTION_DEBUG_LOG)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(debugReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
@@ -109,8 +109,8 @@ class MainActivity : ComponentActivity() {
             registerReceiver(debugReceiver, filter)
         }
 
-        val intent = Intent(this, TaskService::class.java)
-        Log.d("MainActivity", "Starting TaskService")
+        val intent = Intent(this, MainService::class.java)
+        Log.d("MainActivity", "Starting MainService")
         startForegroundService(intent)
 
         setContent {
@@ -120,8 +120,8 @@ class MainActivity : ComponentActivity() {
                     onResetWatcher = {
                         watchedFolder = null
                         saveWatchedFolder(null)
-                        val resetIntent = Intent(this, TaskService::class.java).apply {
-                            action = TaskService.ACTION_RESET_WATCHER
+                        val resetIntent = Intent(this, MainService::class.java).apply {
+                            action = MainService.ACTION_RESET_WATCHER
                         }
                         startService(resetIntent)
                     },
