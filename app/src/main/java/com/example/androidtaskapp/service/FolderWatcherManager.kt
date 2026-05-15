@@ -1,21 +1,17 @@
 package com.example.androidtaskapp.service
 
-import android.app.NotificationManager
 import android.content.Context
-import android.content.Intent
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
-import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import com.example.androidtaskapp.R
 
-class FolderManager(
+class FolderWatcherManager(
     private val context: Context,
-    private val channelId: String,
+    private val notificationManager: AppNotificationManager,
+    private val debugManager: DebugManager,
     private val onStatusChanged: () -> Unit,
 ) {
     var lastEventInfo: String = "No changes yet"
@@ -48,11 +44,11 @@ class FolderManager(
         try {
             val uri = folderUriString.toUri()
             currentWatchedUri = uri
-            sendDebugLog("Monitoring: $uri")
+            debugManager.log("FolderWatcherManager", "Monitoring: $uri")
 
             val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
                 override fun onChange(selfChange: Boolean, updatedUri: Uri?) {
-                    sendDebugLog("System event triggered scan")
+                    debugManager.log("FolderWatcherManager", "System event triggered scan")
                     scanFolder(uri, showPush = true)
                 }
             }
@@ -62,7 +58,7 @@ class FolderManager(
             scanFolder(uri, showPush = false) // Initial state
             pollingHandler.postDelayed(pollRunnable, 5000)
         } catch (e: Exception) {
-            sendDebugLog("Setup Error: ${e.message}")
+            debugManager.log("FolderWatcherManager", "Setup Error: ${e.message}")
         }
     }
 
@@ -82,15 +78,15 @@ class FolderManager(
                 if (!fileMetadataMap.containsKey(name)) {
                     if (showPush && fileMetadataMap.isNotEmpty()) {
                         lastEventInfo = "Created: $name"
-                        sendDebugLog(lastEventInfo)
-                        showPushNotification("File Created", name)
+                        debugManager.log("FolderWatcherManager", lastEventInfo)
+                        notificationManager.showPushNotification("File Created", name)
                         changeDetected = true
                     }
                 } else if (fileMetadataMap[name]!! < lastModified) {
                     if (showPush) {
                         lastEventInfo = "Updated: $name"
-                        sendDebugLog(lastEventInfo)
-                        showPushNotification("File Updated", name)
+                        debugManager.log("FolderWatcherManager", lastEventInfo)
+                        notificationManager.showPushNotification("File Updated", name)
                         changeDetected = true
                     }
                 }
@@ -101,8 +97,8 @@ class FolderManager(
                 if (!newMetadata.containsKey(oldName)) {
                     if (showPush) {
                         lastEventInfo = "Deleted: $oldName"
-                        sendDebugLog(lastEventInfo)
-                        showPushNotification("File Deleted", oldName)
+                        debugManager.log("FolderWatcherManager", lastEventInfo)
+                        notificationManager.showPushNotification("File Deleted", oldName)
                         changeDetected = true
                     }
                 }
@@ -118,12 +114,12 @@ class FolderManager(
             }
 
         } catch (e: Exception) {
-            sendDebugLog("Scan Error: ${e.message}")
+            debugManager.log("FolderWatcherManager", "Scan Error: ${e.message}")
         }
     }
 
     fun reset() {
-        sendDebugLog("Watcher reset.")
+        debugManager.log("FolderWatcherManager", "Watcher reset.")
         setupWatcher(null)
         fileMetadataMap.clear()
         lastEventInfo = "Watcher reset"
@@ -134,27 +130,5 @@ class FolderManager(
         pollingHandler.removeCallbacks(pollRunnable)
         folderContentObserver?.let { context.contentResolver.unregisterContentObserver(it) }
         folderContentObserver = null
-    }
-
-    private fun showPushNotification(title: String, text: String) {
-        val notificationManager = context.getSystemService(NotificationManager::class.java)
-        val pushNotification = NotificationCompat.Builder(context, channelId)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setSmallIcon(R.drawable.ic_home)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
-        // Use a unique ID based on message content to avoid collisions while allowing updates
-        notificationManager.notify(text.hashCode(), pushNotification)
-    }
-
-    private fun sendDebugLog(message: String) {
-        Log.d("FolderManager", message)
-        val intent = Intent(MainService.ACTION_DEBUG_LOG).apply {
-            setPackage(context.packageName)
-            putExtra(MainService.EXTRA_LOG_MESSAGE, message)
-        }
-        context.sendBroadcast(intent)
     }
 }
