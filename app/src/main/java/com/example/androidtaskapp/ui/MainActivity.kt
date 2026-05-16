@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,12 +43,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import com.example.androidtaskapp.R
 import com.example.androidtaskapp.model.Task
@@ -58,6 +54,7 @@ import com.example.androidtaskapp.service.MainService
 import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
 
@@ -103,20 +100,14 @@ class MainActivity : ComponentActivity() {
 
         watchedFolder = getSavedWatchedFolder()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
-                PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         val filter = IntentFilter(MainService.ACTION_DEBUG_LOG)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(debugReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(debugReceiver, filter)
-        }
+        registerReceiver(debugReceiver, filter, RECEIVER_NOT_EXPORTED)
 
         val intent = Intent(this, MainService::class.java)
         Log.d("MainActivity", "Starting MainService")
@@ -143,7 +134,7 @@ class MainActivity : ComponentActivity() {
 
     private fun saveWatchedFolder(uri: String?) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
-        prefs.edit().putString("watched_folder", uri).apply()
+        prefs.edit { putString("watched_folder", uri) }
     }
 
     private fun getSavedWatchedFolder(): String? {
@@ -196,22 +187,7 @@ fun AndroidTaskAppApp(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 val currentDestination = AppDestinations.entries[pagerState.currentPage]
-                // Top panel - now static
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .shadow(elevation = 4.dp)
-                        .zIndex(1f)
-                        .background(Color(0xFFD6D6D6)) // Lighter grey
-                        .padding(start = 16.dp, end = 16.dp, bottom = 4.dp, top = 16.dp),
-                    verticalArrangement = Arrangement.Bottom
-                ) {
-                    Text(
-                        text = "Hello ${currentDestination.label}",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                }
+                TopPanel(title = currentDestination.label)
             }
         ) { innerPadding ->
             HorizontalPager(
