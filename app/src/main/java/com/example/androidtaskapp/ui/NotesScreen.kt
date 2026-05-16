@@ -36,27 +36,23 @@ fun NotesScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .background(Color(0xFFEEEEEE)) // Light grey background
-            .padding(8.dp)
     ) {
-        // Filters panel
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFE0E0E0)) // More grey than background
-                .padding(2.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = "Filters", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+        SubTopPanel {
+            Text(
+                text = "Filters",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.Black
+            )
         }
-
+        
         Spacer(modifier = Modifier.height(6.dp))
-
+        
         // Task list
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
+                .padding(horizontal = 12.dp)
         ) {
             items(mockTasks) { task ->
                 Row(
