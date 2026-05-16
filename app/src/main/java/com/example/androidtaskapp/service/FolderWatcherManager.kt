@@ -10,7 +10,6 @@ import androidx.documentfile.provider.DocumentFile
 
 class FolderWatcherManager(
     private val context: Context,
-    private val notificationManager: AppNotificationManager,
     private val debugManager: DebugManager,
     private val onStatusChanged: () -> Unit,
 ) {
@@ -82,7 +81,6 @@ class FolderWatcherManager(
                     if (showPush && fileMetadataMap.isNotEmpty()) {
                         lastEventInfo = "Created: $name"
                         debugManager.log("FolderWatcherManager", lastEventInfo)
-                        notificationManager.showPushNotification("File Created", name)
                         changeDetected = true
                     }
                 } else if (fileMetadataMap[name]!! < lastModified) {
@@ -100,7 +98,6 @@ class FolderWatcherManager(
                     if (showPush) {
                         lastEventInfo = "Deleted: $oldName"
                         debugManager.log("FolderWatcherManager", lastEventInfo)
-                        notificationManager.showPushNotification("File Deleted", oldName)
                         changeDetected = true
                     }
                 }

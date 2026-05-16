@@ -17,7 +17,7 @@ class MainService : Service() {
         super.onCreate()
         debugManager = DebugManager(this)
         notificationManager = AppNotificationManager(this)
-        folderWatcherManager = FolderWatcherManager(this, notificationManager, debugManager) { updateNotification() }
+        folderWatcherManager = FolderWatcherManager(this, debugManager) { updateNotification() }
         
         debugManager.log("MainService", "Service Created")
     }
