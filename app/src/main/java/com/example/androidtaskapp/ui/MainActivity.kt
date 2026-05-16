@@ -13,20 +13,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
@@ -39,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.androidtaskapp.R
 import com.example.androidtaskapp.service.MainService
@@ -199,51 +189,6 @@ fun AndroidTaskAppApp(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun SettingsScreen(
-    onSelectFolder: () -> Unit,
-    onResetWatcher: () -> Unit,
-    watchedFolder: String?,
-    debugLogs: List<String>,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.padding(16.dp)
-    ) {
-        Text(text = "Settings", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(text = "Watched Folder:", style = MaterialTheme.typography.titleMedium)
-        Text(text = watchedFolder ?: "Not selected", style = MaterialTheme.typography.bodyMedium)
-        
-        Column(modifier = Modifier.padding(top = 8.dp)) {
-            Button(onClick = onSelectFolder, modifier = Modifier.fillMaxWidth()) {
-                Text("Select Folder")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = onResetWatcher, modifier = Modifier.fillMaxWidth()) {
-                Text("Reset Watcher")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(text = "Debug Information", style = MaterialTheme.typography.titleMedium)
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(top = 8.dp)
-        ) {
-            items(debugLogs) { log ->
-                Text(text = log, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
