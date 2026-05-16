@@ -3,12 +3,10 @@ package com.example.androidtaskapp.service
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import com.example.androidtaskapp.model.TaskRepository
 
 class MainService : Service() {
 
-    private var taskCount = 0
-    private val totalTasks = 5
-    
     private lateinit var folderWatcherManager: FolderWatcherManager
     private lateinit var notificationManager: AppNotificationManager
     private lateinit var debugManager: DebugManager
@@ -27,9 +25,7 @@ class MainService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_INCREMENT -> {
-                taskCount++
-                updateNotification()
-                debugManager.log("MainService", "Incremented taskCount to $taskCount")
+                debugManager.log("MainService", "ACTION_INCREMENT no longer supported with file watcher")
             }
             ACTION_UPDATE_WATCHED_FOLDER -> {
                 val folderUri = intent.getStringExtra(EXTRA_FOLDER_URI)
@@ -45,11 +41,7 @@ class MainService : Service() {
                 
                 startForeground(
                     notificationManager.getForegroundId(),
-                    notificationManager.getForegroundNotification(
-                        taskCount,
-                        totalTasks,
-                        folderWatcherManager.lastEventInfo,
-                    ),
+                    notificationManager.getForegroundNotification(TaskRepository.getTaskTitles()),
                 )
             }
         }
@@ -62,7 +54,7 @@ class MainService : Service() {
     }
 
     private fun updateNotification() {
-        notificationManager.updateForegroundNotification(taskCount, totalTasks, folderWatcherManager.lastEventInfo)
+        notificationManager.updateForegroundNotification(TaskRepository.getTaskTitles())
     }
 
     companion object {

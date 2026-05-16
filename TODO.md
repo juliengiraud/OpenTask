@@ -4,16 +4,16 @@ This project should replace the usage of ColorNote
 
 ## Features
 
-- [/] Infinite notification with
-  - [/] title
-    - [ ] icon
-    - [/] text
+- [x] Infinite notification with
+  - [x] title
+    - [x] icon
+    - [x] text
   - [x] button
     - [x] open Modal overview => still modal to be done
-  - [/] real time update
-    - [/] schedule refresh
-    - [ ] sync with Obsidian
-  - [ ] same style
+  - [x] real time update
+    - [x] schedule refresh
+    - [x] sync with Obsidian
+  - [x] same style
 - [/] Modal overview
   - [x] window displayed over current app with transparent background
   - [ ] title

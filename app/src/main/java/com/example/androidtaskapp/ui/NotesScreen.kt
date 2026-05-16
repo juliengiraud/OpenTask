@@ -12,19 +12,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.androidtaskapp.model.Task
-import java.time.LocalDateTime
+import com.example.androidtaskapp.model.TaskRepository
 
 @Composable
 fun NotesScreen(modifier: Modifier = Modifier) {
-    val mockTasks = remember {
-        val dueDate = LocalDateTime.of(2026, 5, 14, 0, 0)
-        listOf(
-            Task(title = "Courses", textContent = "Courses", dueDate = dueDate),
-            Task(title = "Plantes", textContent = "Plantes", dueDate = dueDate),
-            Task(title = "Sortie Magda", textContent = "Sortie Magda", dueDate = dueDate)
-        )
-    }
+    val mockTasks = remember { TaskRepository.mockTasks }
 
     Column(
         modifier = modifier

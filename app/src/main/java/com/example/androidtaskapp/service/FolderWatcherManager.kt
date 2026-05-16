@@ -17,6 +17,9 @@ class FolderWatcherManager(
     var lastEventInfo: String = "No changes yet"
         private set
 
+    val activeTasks: List<String>
+        get() = fileMetadataMap.keys.toList()
+
     private var fileMetadataMap = mutableMapOf<String, Long>()
     private var folderContentObserver: ContentObserver? = null
     private val pollingHandler = Handler(Looper.getMainLooper())

@@ -6,6 +6,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.text.SpannableString
+import android.text.style.AbsoluteSizeSpan
 import androidx.core.app.NotificationCompat
 import com.example.androidtaskapp.R
 import com.example.androidtaskapp.ui.PopupActivity
@@ -31,7 +33,7 @@ class AppNotificationManager(private val context: Context) {
         notificationManager.createNotificationChannel(channel)
     }
 
-    fun getForegroundNotification(taskCount: Int, totalTasks: Int, lastEventInfo: String): Notification {
+    fun getForegroundNotification(taskNames: List<String>): Notification {
         val popupIntent = Intent(context, PopupActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
@@ -43,25 +45,35 @@ class AppNotificationManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val taskCount = taskNames.size
+        val joinedNames = taskNames.joinToString(" / ")
+        val titleText = "[$taskCount] $joinedNames"
+        
+        val spannableTitle = SpannableString(titleText).apply {
+            // Standard title is ~16sp, aiming for ~14sp (roughly 2sp/dp smaller)
+            setSpan(AbsoluteSizeSpan(14, true), 0, titleText.length, 0)
+        }
+
         return NotificationCompat.Builder(context, channelId)
-            .setContentTitle("My task app title")
-            .setContentText("Done: $taskCount/$totalTasks | $lastEventInfo")
-            .setSmallIcon(R.drawable.ic_home)
+            .setSubText("Tâches pour aujourd'hui")
+            .setContentTitle(spannableTitle)
+            .setContentText(joinedNames)
+            .setSmallIcon(R.drawable.ic_settings)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
     }
 
-    fun updateForegroundNotification(taskCount: Int, totalTasks: Int, lastEventInfo: String) {
-        notificationManager.notify(foregroundId, getForegroundNotification(taskCount, totalTasks, lastEventInfo))
+    fun updateForegroundNotification(taskNames: List<String>) {
+        notificationManager.notify(foregroundId, getForegroundNotification(taskNames))
     }
 
     fun showPushNotification(title: String, text: String) {
         val pushNotification = NotificationCompat.Builder(context, channelId)
             .setContentTitle(title)
             .setContentText(text)
-            .setSmallIcon(R.drawable.ic_home)
+            .setSmallIcon(R.drawable.ic_settings)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
