@@ -15,7 +15,7 @@ This project should replace the usage of ColorNote
     - [ ] sync with Obsidian
   - [ ] same style
 - [/] Modal overview
-  - [/] window displayed over current app with transparent background
+  - [x] window displayed over current app with transparent background
   - [ ] title
   - [ ] list of items
     - [ ] text
