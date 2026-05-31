@@ -1,13 +1,15 @@
 package com.example.androidtaskapp.model
 
-import java.time.LocalDateTime
+import androidx.compose.runtime.mutableStateListOf
 
 object TaskRepository {
-    val mockTasks = listOf(
-        Task(title = "Courses", textContent = "Courses", dueDate = LocalDateTime.of(2026, 5, 14, 0, 0)),
-        Task(title = "Plantes", textContent = "Plantes", dueDate = LocalDateTime.of(2026, 5, 14, 0, 0)),
-        Task(title = "Sortie Magda", textContent = "Sortie Magda", dueDate = LocalDateTime.of(2026, 5, 14, 0, 0))
-    )
+    private val _tasks = mutableStateListOf<Task>()
+    val tasks: List<Task> get() = _tasks
 
-    fun getTaskTitles(): List<String> = mockTasks.map { it.title }
+    fun setTasks(newTasks: List<Task>) {
+        _tasks.clear()
+        _tasks.addAll(newTasks)
+    }
+
+    fun getTaskTitles(): List<String> = _tasks.map { it.title }
 }

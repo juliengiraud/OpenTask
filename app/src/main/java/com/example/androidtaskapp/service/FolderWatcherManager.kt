@@ -7,6 +7,11 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.example.androidtaskapp.model.Task
+import com.example.androidtaskapp.model.TaskRepository
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 class FolderWatcherManager(
     private val context: Context,
@@ -71,8 +76,13 @@ class FolderWatcherManager(
 
             val newMetadata = mutableMapOf<String, Long>()
             var changeDetected = false
+            val loadedTasks = mutableListOf<Task>()
 
             for (file in currentFiles) {
+                if (file.name?.endsWith(".md") == true) {
+                    loadTaskFromFile(file)?.let { loadedTasks.add(it) }
+                }
+
                 val name = file.name ?: "Unknown"
                 val lastModified = file.lastModified()
                 newMetadata[name] = lastModified
@@ -109,11 +119,38 @@ class FolderWatcherManager(
                 }
                 fileMetadataMap.clear()
                 fileMetadataMap.putAll(newMetadata)
+                TaskRepository.setTasks(loadedTasks)
                 onStatusChanged()
             }
 
         } catch (e: Exception) {
             debugManager.log("FolderWatcherManager", "Scan Error: ${e.message}")
+        }
+    }
+
+    private fun loadTaskFromFile(file: DocumentFile): Task? {
+        return try {
+            val content = context.contentResolver.openInputStream(file.uri)?.use { inputStream ->
+                inputStream.bufferedReader().readText()
+            } ?: return null
+
+            val lines = content.lines()
+            val titleRegex = Regex("^#+ *")
+            val title = lines.find { it.trim().startsWith("#") }
+                ?.let { it.trim().replace(titleRegex, "") }
+                ?: file.name?.removeSuffix(".md") ?: "Unknown"
+
+            Task(
+                title = title,
+                textContent = content,
+                lastUpdate = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(file.lastModified()),
+                    ZoneId.systemDefault()
+                )
+            )
+        } catch (e: Exception) {
+            debugManager.log("FolderWatcherManager", "Error reading ${file.name}: ${e.message}")
+            null
         }
     }
 

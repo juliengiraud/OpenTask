@@ -16,7 +16,7 @@ import com.example.androidtaskapp.model.TaskRepository
 
 @Composable
 fun NotesScreen(modifier: Modifier = Modifier) {
-    val mockTasks = remember { TaskRepository.mockTasks }
+    val tasks = TaskRepository.tasks
 
     Column(
         modifier = modifier
@@ -34,7 +34,7 @@ fun NotesScreen(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(6.dp))
         
         NotesList(
-            tasks = mockTasks,
+            tasks = tasks,
             modifier = Modifier.weight(1f)
         )
     }
