@@ -134,3 +134,9 @@ This project should replace the usage of ColorNote
   - [ ] options icon
   - [ ] create icon
   - [ ] same style
+- [ ] setup local sqlight database
+- [ ] log execution time
+- [ ] rework folder selection
+  - [ ] setup a default app folder, its our vault
+  - [ ] display it as "use another vault" like on Obsidian
+  - [ ] reset button switch back to default vault
