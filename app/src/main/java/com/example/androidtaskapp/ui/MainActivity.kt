@@ -28,10 +28,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import com.example.androidtaskapp.R
+import com.example.androidtaskapp.model.Task
 import com.example.androidtaskapp.service.MainService
 import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
 import kotlinx.coroutines.launch
@@ -140,54 +143,68 @@ fun AndroidTaskAppApp(
     watchedFolder: String?,
     debugLogs: List<String>
 ) {
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
     val pagerState = rememberPagerState(pageCount = { AppDestinations.entries.size })
     val scope = rememberCoroutineScope()
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEachIndexed { index, destination ->
-                item(
-                    icon = {
-                        Icon(
-                            painterResource(destination.icon),
-                            contentDescription = destination.label
-                        )
-                    },
-                    label = { Text(destination.label) },
-                    selected = pagerState.currentPage == index,
-                    onClick = {
-                        scope.launch {
-                            pagerState.scrollToPage(index)
-                        }
-                    }
-                )
-            }
+    if (selectedTask != null) {
+        BackHandler {
+            selectedTask = null
         }
-    ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                val currentDestination = AppDestinations.entries[pagerState.currentPage]
-                TopPanel(title = currentDestination.label)
-            }
-        ) { innerPadding ->
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) { pageIndex ->
-                val destination = AppDestinations.entries[pageIndex]
-                when (destination) {
-                    AppDestinations.HOME -> NotesScreen(Modifier.fillMaxSize())
-                    AppDestinations.FAVORITES -> Greeting("Favorites", Modifier.fillMaxSize())
-                    AppDestinations.SETTINGS -> SettingsScreen(
-                        onSelectFolder = onSelectFolder,
-                        onResetWatcher = onResetWatcher,
-                        watchedFolder = watchedFolder,
-                        debugLogs = debugLogs,
-                        modifier = Modifier.fillMaxSize()
+        NoteDetailScreen(
+            task = selectedTask!!,
+            onBack = { selectedTask = null }
+        )
+    } else {
+        NavigationSuiteScaffold(
+            navigationSuiteItems = {
+                AppDestinations.entries.forEachIndexed { index, destination ->
+                    item(
+                        icon = {
+                            Icon(
+                                painterResource(destination.icon),
+                                contentDescription = destination.label
+                            )
+                        },
+                        label = { Text(destination.label) },
+                        selected = pagerState.currentPage == index,
+                        onClick = {
+                            scope.launch {
+                                pagerState.scrollToPage(index)
+                            }
+                        }
                     )
+                }
+            }
+        ) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                topBar = {
+                    val currentDestination = AppDestinations.entries[pagerState.currentPage]
+                    TopPanel(title = currentDestination.label)
+                }
+            ) { innerPadding ->
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) { pageIndex ->
+                    val destination = AppDestinations.entries[pageIndex]
+                    when (destination) {
+                        AppDestinations.HOME -> NotesScreen(
+                            onTaskClick = { selectedTask = it },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        AppDestinations.FAVORITES -> Greeting("Favorites", Modifier.fillMaxSize())
+                        AppDestinations.SETTINGS -> SettingsScreen(
+                            onSelectFolder = onSelectFolder,
+                            onResetWatcher = onResetWatcher,
+                            watchedFolder = watchedFolder,
+                            debugLogs = debugLogs,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }

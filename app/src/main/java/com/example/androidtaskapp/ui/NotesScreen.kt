@@ -12,10 +12,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.androidtaskapp.model.Task
 import com.example.androidtaskapp.model.TaskRepository
 
 @Composable
-fun NotesScreen(modifier: Modifier = Modifier) {
+fun NotesScreen(
+    onTaskClick: (Task) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val tasks = TaskRepository.tasks
 
     Column(
@@ -35,6 +39,7 @@ fun NotesScreen(modifier: Modifier = Modifier) {
         
         NotesList(
             tasks = tasks,
+            onTaskClick = onTaskClick,
             modifier = Modifier.weight(1f)
         )
     }

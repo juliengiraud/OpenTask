@@ -7,6 +7,7 @@ data class Task(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
     val textContent: String,
+    val filename: String,
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val lastUpdate: LocalDateTime = LocalDateTime.now(),
     val dueDate: LocalDateTime? = null,

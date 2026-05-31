@@ -1,6 +1,7 @@
 package com.example.androidtaskapp.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import com.example.androidtaskapp.model.Task
 @Composable
 fun NotesList(
     tasks: List<Task>,
+    onTaskClick: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -33,6 +35,7 @@ fun NotesList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.White) // Background for each task row
+                    .clickable { onTaskClick(task) }
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically

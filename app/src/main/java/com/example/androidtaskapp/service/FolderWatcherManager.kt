@@ -143,6 +143,7 @@ class FolderWatcherManager(
             Task(
                 title = title,
                 textContent = content,
+                filename = file.name ?: "Unknown",
                 lastUpdate = LocalDateTime.ofInstant(
                     Instant.ofEpochMilli(file.lastModified()),
                     ZoneId.systemDefault()
