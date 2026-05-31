@@ -24,15 +24,46 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.TextFieldValue
 import com.example.androidtaskapp.model.Task
 import java.time.format.DateTimeFormatter
 
 @Composable
 fun NoteDetailScreen(
     task: Task,
+    isEditMode: Boolean,
+    onEditModeChange: (Boolean) -> Unit,
+    onSave: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var textFieldValue by remember(task.id) { 
+        mutableStateOf(TextFieldValue(task.textContent)) 
+    }
+    val focusRequester = remember { FocusRequester() }
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+
+    LaunchedEffect(isEditMode) {
+        if (isEditMode) {
+            focusRequester.requestFocus()
+        }
+    }
+
     Column(modifier = modifier.fillMaxSize().background(Color.White)) {
         // Top Panel
         Column(
@@ -47,19 +78,40 @@ fun NoteDetailScreen(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "←",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier
+                            .clickable { onBack() }
+                            .padding(end = 12.dp)
+                    )
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        maxLines = 1
+                    )
+                }
+
                 Text(
-                    text = "←",
+                    text = if (isEditMode) "✓" else "✎",
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier
-                        .clickable { onBack() }
-                        .padding(end = 12.dp)
-                )
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    maxLines = 1
+                        .clickable { 
+                            if (isEditMode) {
+                                onSave(textFieldValue.text)
+                            } else {
+                                // When entering via icon, place cursor at the end
+                                textFieldValue = textFieldValue.copy(
+                                    selection = TextRange(textFieldValue.text.length)
+                                )
+                            }
+                            onEditModeChange(!isEditMode) 
+                        }
+                        .padding(start = 12.dp)
                 )
             }
         }
@@ -93,30 +145,65 @@ fun NoteDetailScreen(
 
         // Content
         val scrollState = rememberScrollState()
+        val textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black)
+        
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
-            task.textContent.lines().forEach { line ->
-                Text(
-                    text = line,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black,
+            Box {
+                BasicTextField(
+                    value = textFieldValue,
+                    onValueChange = { textFieldValue = it },
+                    readOnly = !isEditMode,
+                    textStyle = textStyle,
+                    onTextLayout = { textLayoutResult = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .drawBehind {
-                            val strokeWidth = 0.5.dp.toPx()
-                            val y = size.height - strokeWidth / 2
-                            drawLine(
-                                color = Color(0xFFF2F2F2), // Lighter grey
-                                start = Offset(0f, y),
-                                end = Offset(size.width, y),
-                                strokeWidth = strokeWidth
-                            )
+                        .focusRequester(focusRequester),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier.drawBehind {
+                                textLayoutResult?.let { layout ->
+                                    val strokeWidth = 0.5.dp.toPx()
+                                    for (i in 0 until layout.lineCount) {
+                                        val y = layout.getLineBottom(i) - strokeWidth / 2
+                                        drawLine(
+                                            color = Color(0xFFF2F2F2),
+                                            start = Offset(0f, y),
+                                            end = Offset(size.width, y),
+                                            strokeWidth = strokeWidth
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            innerTextField()
                         }
+                    }
                 )
+
+                if (!isEditMode) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onDoubleTap = { offset ->
+                                        textLayoutResult?.let { layout ->
+                                            val index = layout.getOffsetForPosition(offset)
+                                            textFieldValue = textFieldValue.copy(
+                                                selection = TextRange(index)
+                                            )
+                                        }
+                                        onEditModeChange(true)
+                                    }
+                                )
+                            }
+                    )
+                }
             }
         }
     }

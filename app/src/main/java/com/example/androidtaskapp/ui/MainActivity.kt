@@ -35,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import com.example.androidtaskapp.R
 import com.example.androidtaskapp.model.Task
+import com.example.androidtaskapp.model.TaskRepository
 import com.example.androidtaskapp.service.MainService
 import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
 import kotlinx.coroutines.launch
@@ -144,16 +145,32 @@ fun AndroidTaskAppApp(
     debugLogs: List<String>
 ) {
     var selectedTask by remember { mutableStateOf<Task?>(null) }
+    var isEditMode by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(pageCount = { AppDestinations.entries.size })
     val scope = rememberCoroutineScope()
 
     if (selectedTask != null) {
         BackHandler {
-            selectedTask = null
+            if (isEditMode) {
+                isEditMode = false
+            } else {
+                selectedTask = null
+            }
         }
         NoteDetailScreen(
             task = selectedTask!!,
-            onBack = { selectedTask = null }
+            isEditMode = isEditMode,
+            onEditModeChange = { isEditMode = it },
+            onSave = { newContent ->
+                TaskRepository.updateTask(selectedTask!!.id, newContent)
+            },
+            onBack = {
+                if (isEditMode) {
+                    isEditMode = false
+                } else {
+                    selectedTask = null
+                }
+            }
         )
     } else {
         NavigationSuiteScaffold(
