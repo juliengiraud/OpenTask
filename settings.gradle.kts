@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AndroidTaskApp"
+rootProject.name = "OpenTask"
 include(":app")
  

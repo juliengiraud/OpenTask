@@ -37,7 +37,7 @@ import com.example.androidtaskapp.R
 import com.example.androidtaskapp.model.Task
 import com.example.androidtaskapp.model.TaskRepository
 import com.example.androidtaskapp.service.MainService
-import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
+import com.example.androidtaskapp.ui.theme.OpenTaskTheme
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
 
@@ -99,8 +99,8 @@ class MainActivity : ComponentActivity() {
         startForegroundService(intent)
 
         setContent {
-            AndroidTaskAppTheme {
-                AndroidTaskAppApp(
+            OpenTaskTheme {
+                OpenTaskApp(
                     onSelectFolder = { folderPickerLauncher.launch(null) },
                     onResetWatcher = {
                         watchedFolder = null
@@ -138,7 +138,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AndroidTaskAppApp(
+fun OpenTaskApp(
     onSelectFolder: () -> Unit,
     onResetWatcher: () -> Unit,
     watchedFolder: String?,
@@ -248,7 +248,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    AndroidTaskAppTheme {
+    OpenTaskTheme {
         Greeting("Android")
     }
 }

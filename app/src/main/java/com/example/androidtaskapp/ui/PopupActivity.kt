@@ -21,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.androidtaskapp.service.MainService
-import com.example.androidtaskapp.ui.theme.AndroidTaskAppTheme
+import com.example.androidtaskapp.ui.theme.OpenTaskTheme
 
 class PopupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +35,7 @@ class PopupActivity : ComponentActivity() {
         startService(incrementIntent)
 
         setContent {
-            AndroidTaskAppTheme {
+            OpenTaskTheme {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
