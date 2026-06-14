@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.service
+package com.example.opentask.service
 
 import android.content.Context
 import android.database.ContentObserver
@@ -7,8 +7,8 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import com.example.androidtaskapp.model.Task
-import com.example.androidtaskapp.model.TaskRepository
+import com.example.opentask.model.Task
+import com.example.opentask.model.TaskRepository
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId

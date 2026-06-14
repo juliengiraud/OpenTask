@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.model
+package com.example.opentask.model
 
 import java.time.LocalDateTime
 import java.util.UUID

@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.service
+package com.example.opentask.service
 
 import android.content.Context
 import android.content.Intent

@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.ui
+package com.example.opentask.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,7 +40,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
-import com.example.androidtaskapp.model.Task
+import com.example.opentask.model.Task
 import java.time.format.DateTimeFormatter
 
 @Composable

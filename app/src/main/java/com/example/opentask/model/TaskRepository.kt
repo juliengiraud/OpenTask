@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.model
+package com.example.opentask.model
 
 import androidx.compose.runtime.mutableStateListOf
 

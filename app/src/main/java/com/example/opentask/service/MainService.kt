@@ -1,9 +1,9 @@
-package com.example.androidtaskapp.service
+package com.example.opentask.service
 
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import com.example.androidtaskapp.model.TaskRepository
+import com.example.opentask.model.TaskRepository
 
 class MainService : Service() {
 
@@ -58,11 +58,11 @@ class MainService : Service() {
     }
 
     companion object {
-        const val ACTION_INCREMENT = "com.example.androidtaskapp.service.MainService.ACTION_INCREMENT"
-        const val ACTION_UPDATE_WATCHED_FOLDER = "com.example.androidtaskapp.service.MainService.ACTION_UPDATE_WATCHED_FOLDER"
-        const val ACTION_RESET_WATCHER = "com.example.androidtaskapp.service.MainService.ACTION_RESET_WATCHER"
-        const val EXTRA_FOLDER_URI = "com.example.androidtaskapp.service.MainService.EXTRA_FOLDER_URI"
-        const val ACTION_DEBUG_LOG = "com.example.androidtaskapp.service.MainService.ACTION_DEBUG_LOG"
-        const val EXTRA_LOG_MESSAGE = "com.example.androidtaskapp.service.MainService.EXTRA_LOG_MESSAGE"
+        const val ACTION_INCREMENT = "com.example.opentask.service.MainService.ACTION_INCREMENT"
+        const val ACTION_UPDATE_WATCHED_FOLDER = "com.example.opentask.service.MainService.ACTION_UPDATE_WATCHED_FOLDER"
+        const val ACTION_RESET_WATCHER = "com.example.opentask.service.MainService.ACTION_RESET_WATCHER"
+        const val EXTRA_FOLDER_URI = "com.example.opentask.service.MainService.EXTRA_FOLDER_URI"
+        const val ACTION_DEBUG_LOG = "com.example.opentask.service.MainService.ACTION_DEBUG_LOG"
+        const val EXTRA_LOG_MESSAGE = "com.example.opentask.service.MainService.EXTRA_LOG_MESSAGE"
     }
 }

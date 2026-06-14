@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.ui.theme
+package com.example.opentask.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

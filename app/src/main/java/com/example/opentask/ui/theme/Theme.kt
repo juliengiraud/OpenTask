@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.ui.theme
+package com.example.opentask.ui.theme
 
 import android.app.Activity
 import android.os.Build

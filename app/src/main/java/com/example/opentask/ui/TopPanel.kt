@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.ui
+package com.example.opentask.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

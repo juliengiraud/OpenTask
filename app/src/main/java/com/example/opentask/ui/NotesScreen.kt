@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.ui
+package com.example.opentask.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -12,8 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.androidtaskapp.model.Task
-import com.example.androidtaskapp.model.TaskRepository
+import com.example.opentask.model.Task
+import com.example.opentask.model.TaskRepository
 
 @Composable
 fun NotesScreen(

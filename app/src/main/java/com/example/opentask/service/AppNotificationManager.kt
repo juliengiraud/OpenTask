@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.service
+package com.example.opentask.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -9,8 +9,8 @@ import android.content.Intent
 import android.text.SpannableString
 import android.text.style.AbsoluteSizeSpan
 import androidx.core.app.NotificationCompat
-import com.example.androidtaskapp.R
-import com.example.androidtaskapp.ui.PopupActivity
+import com.example.opentask.R
+import com.example.opentask.ui.PopupActivity
 
 class AppNotificationManager(private val context: Context) {
 

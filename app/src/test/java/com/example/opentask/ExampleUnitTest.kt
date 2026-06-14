@@ -1,4 +1,4 @@
-package com.example.androidtaskapp
+package com.example.opentask
 
 import org.junit.Test
 

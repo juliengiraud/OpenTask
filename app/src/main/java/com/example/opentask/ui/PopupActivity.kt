@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.ui
+package com.example.opentask.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -20,8 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.androidtaskapp.service.MainService
-import com.example.androidtaskapp.ui.theme.OpenTaskTheme
+import com.example.opentask.service.MainService
+import com.example.opentask.ui.theme.OpenTaskTheme
 
 class PopupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

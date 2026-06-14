@@ -1,4 +1,4 @@
-package com.example.androidtaskapp.ui
+package com.example.opentask.ui
 
 import android.Manifest
 import android.content.BroadcastReceiver
@@ -33,11 +33,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
-import com.example.androidtaskapp.R
-import com.example.androidtaskapp.model.Task
-import com.example.androidtaskapp.model.TaskRepository
-import com.example.androidtaskapp.service.MainService
-import com.example.androidtaskapp.ui.theme.OpenTaskTheme
+import com.example.opentask.R
+import com.example.opentask.model.Task
+import com.example.opentask.model.TaskRepository
+import com.example.opentask.service.MainService
+import com.example.opentask.ui.theme.OpenTaskTheme
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
 
