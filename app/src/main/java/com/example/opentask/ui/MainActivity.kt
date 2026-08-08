@@ -199,7 +199,11 @@ fun OpenTaskApp(
                             pagerState.scrollToPage(index)
                         }
                     },
-                    onAddNoteClick = { /* TODO */ }
+                    onAddNoteClick = {
+                        val newTask = TaskRepository.createEmptyTask()
+                        activity.selectedTask = newTask
+                        activity.isEditMode = true
+                    }
                 )
             }
         ) { innerPadding ->

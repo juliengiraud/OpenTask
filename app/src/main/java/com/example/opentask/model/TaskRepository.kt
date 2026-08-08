@@ -20,4 +20,14 @@ object TaskRepository {
     }
 
     fun getTaskTitles(): List<String> = _tasks.map { it.title }
+
+    fun createEmptyTask(): Task {
+        val newTask = Task(
+            title = "New Note",
+            textContent = "",
+            filename = "new_note_${System.currentTimeMillis()}.txt"
+        )
+        _tasks.add(0, newTask) // Add to the top of the list
+        return newTask
+    }
 }
