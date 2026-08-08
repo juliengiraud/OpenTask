@@ -14,14 +14,17 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.example.opentask.model.TaskRepository
 import com.example.opentask.service.MainService
@@ -43,6 +46,7 @@ class PopupActivity : ComponentActivity() {
 
         setContent {
             OpenTaskTheme {
+                val screenHeight = LocalConfiguration.current.screenHeightDp.dp
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -53,7 +57,7 @@ class PopupActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth(0.9f)
-                            .fillMaxHeight(0.5f)
+                            .heightIn(max = screenHeight * 0.8f) // Max 80% of screen height
                             .background(AppConfig.DefaultBackgroundColor, RoundedCornerShape(12.dp))
                             .clip(RoundedCornerShape(12.dp))
                             .clickable(enabled = false) { }, // Prevent closing when clicking inside
@@ -79,7 +83,7 @@ class PopupActivity : ComponentActivity() {
                         NotesList(
                             tasks = TaskRepository.tasks,
                             modifier = Modifier
-                                .weight(1f)
+                                .weight(1f, fill = false) // Adaptive height
                                 .padding(horizontal = 16.dp)
                         )
 
