@@ -18,10 +18,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -29,19 +27,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.remember
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
-import com.example.opentask.R
 import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
 import com.example.opentask.service.MainService
 import com.example.opentask.ui.theme.OpenTaskTheme
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.graphics.Color
 
 class MainActivity : ComponentActivity() {
 
@@ -165,7 +158,7 @@ fun OpenTaskApp(
     watchedFolder: String?,
     debugLogs: List<String>
 ) {
-    val pagerState = rememberPagerState(pageCount = { AppDestinations.entries.size })
+    val pagerState = rememberPagerState(pageCount = { AppTabs.entries.size })
     val scope = rememberCoroutineScope()
 
     if (activity.selectedTask != null) {
@@ -192,70 +185,47 @@ fun OpenTaskApp(
             onBack = handleBack
         )
     } else {
-        NavigationSuiteScaffold(
-            navigationSuiteItems = {
-                AppDestinations.entries.forEachIndexed { index, destination ->
-                    item(
-                        icon = {
-                            Icon(
-                                painterResource(destination.icon),
-                                contentDescription = destination.label
-                            )
-                        },
-                        label = { Text(destination.label) },
-                        selected = pagerState.currentPage == index,
-                        onClick = {
-                            scope.launch {
-                                pagerState.scrollToPage(index)
-                            }
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                val currentTab = AppTabs.entries[pagerState.currentPage]
+                TopPanel(title = currentTab.label)
+            },
+            bottomBar = {
+                MainBottomBar(
+                    selectedTabIndex = pagerState.currentPage,
+                    onTabClick = { index ->
+                        scope.launch {
+                            pagerState.scrollToPage(index)
                         }
-                    )
-                }
+                    },
+                    onAddNoteClick = { /* TODO */ }
+                )
             }
-        ) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                topBar = {
-                    val currentDestination = AppDestinations.entries[pagerState.currentPage]
-                    TopPanel(title = currentDestination.label)
-                },
-                floatingActionButton = {
-                    AddNoteButton(onClick = { /* TODO */ })
-                }
-            ) { innerPadding ->
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                ) { pageIndex ->
-                    val destination = AppDestinations.entries[pageIndex]
-                    when (destination) {
-                        AppDestinations.HOME -> NotesScreen(
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        AppDestinations.FAVORITES -> Greeting("Favorites", Modifier.fillMaxSize())
-                        AppDestinations.SETTINGS -> SettingsScreen(
-                            onSelectFolder = onSelectFolder,
-                            onResetWatcher = onResetWatcher,
-                            watchedFolder = watchedFolder,
-                            debugLogs = debugLogs,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+        ) { innerPadding ->
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding())
+            ) { pageIndex ->
+                val tab = AppTabs.entries[pageIndex]
+                when (tab) {
+                    AppTabs.HOME -> NotesScreen(
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    AppTabs.FAVORITES -> Greeting("Favorites", Modifier.fillMaxSize())
+                    AppTabs.SETTINGS -> SettingsScreen(
+                        onSelectFolder = onSelectFolder,
+                        onResetWatcher = onResetWatcher,
+                        watchedFolder = watchedFolder,
+                        debugLogs = debugLogs,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
     }
-}
-
-enum class AppDestinations(
-    val label: String,
-    val icon: Int,
-) {
-    HOME("Notes", R.drawable.ic_event),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
-    SETTINGS("Settings", R.drawable.ic_settings),
 }
 
 @Composable
