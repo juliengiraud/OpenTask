@@ -40,6 +40,8 @@ import com.example.opentask.service.MainService
 import com.example.opentask.ui.theme.OpenTaskTheme
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 
 class MainActivity : ComponentActivity() {
 
@@ -216,6 +218,9 @@ fun OpenTaskApp(
                 topBar = {
                     val currentDestination = AppDestinations.entries[pagerState.currentPage]
                     TopPanel(title = currentDestination.label)
+                },
+                floatingActionButton = {
+                    AddNoteButton(onClick = { /* TODO */ })
                 }
             ) { innerPadding ->
                 HorizontalPager(
