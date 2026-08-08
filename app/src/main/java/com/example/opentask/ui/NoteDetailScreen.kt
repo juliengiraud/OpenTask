@@ -72,7 +72,7 @@ fun NoteDetailScreen(
                 .height(80.dp)
                 .shadow(elevation = 4.dp)
                 .zIndex(1f)
-                .background(Color(0xFFD6D6D6))
+                .background(AppConfig.TopPanelBackgroundColor)
                 .padding(start = 16.dp, end = 16.dp, bottom = 4.dp, top = 16.dp),
             verticalArrangement = Arrangement.Bottom
         ) {
