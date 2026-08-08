@@ -198,8 +198,12 @@ fun OpenTaskApp(
                         scope.launch {
                             pagerState.scrollToPage(index)
                         }
-                    },
-                    onAddNoteClick = {
+                    }
+                )
+            },
+            floatingActionButton = {
+                AddNoteButton(
+                    onClick = {
                         val newTask = TaskRepository.createEmptyTask()
                         activity.selectedTask = newTask
                         activity.isEditMode = true
@@ -211,7 +215,7 @@ fun OpenTaskApp(
                 state = pagerState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = innerPadding.calculateTopPadding())
+                    .padding(innerPadding)
             ) { pageIndex ->
                 val tab = AppTabs.entries[pageIndex]
                 when (tab) {
