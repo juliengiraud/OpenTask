@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,7 +29,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,11 +44,14 @@ import androidx.core.content.edit
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
+        ActivityResultContracts.RequestPermission(),
     ) { _ -> }
 
     private var watchedFolder by mutableStateOf<String?>(null)
     private val debugLogs = mutableStateListOf<String>()
+    var selectedTask by mutableStateOf<Task?>(null)
+    var isEditMode by mutableStateOf(false)
+    var exitOnBack by mutableStateOf(false)
 
     private val debugReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -84,6 +87,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         watchedFolder = getSavedWatchedFolder()
+        handleIntent(intent)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
@@ -101,6 +105,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             OpenTaskTheme {
                 OpenTaskApp(
+                    activity = this,
                     onSelectFolder = { folderPickerLauncher.launch(null) },
                     onResetWatcher = {
                         watchedFolder = null
@@ -131,6 +136,19 @@ class MainActivity : ComponentActivity() {
         debugLogs.add(message)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val taskId = intent?.getStringExtra("TASK_ID")
+        exitOnBack = intent?.getBooleanExtra("EXIT_ON_BACK", false) ?: false
+        if (taskId != null) {
+            selectedTask = TaskRepository.tasks.find { it.id == taskId }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(debugReceiver)
@@ -139,38 +157,37 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun OpenTaskApp(
+    activity: MainActivity,
     onSelectFolder: () -> Unit,
     onResetWatcher: () -> Unit,
     watchedFolder: String?,
     debugLogs: List<String>
 ) {
-    var selectedTask by remember { mutableStateOf<Task?>(null) }
-    var isEditMode by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(pageCount = { AppDestinations.entries.size })
     val scope = rememberCoroutineScope()
 
-    if (selectedTask != null) {
-        BackHandler {
-            if (isEditMode) {
-                isEditMode = false
+    if (activity.selectedTask != null) {
+        val handleBack = {
+            if (activity.isEditMode) {
+                activity.isEditMode = false
             } else {
-                selectedTask = null
-            }
-        }
-        NoteDetailScreen(
-            task = selectedTask!!,
-            isEditMode = isEditMode,
-            onEditModeChange = { isEditMode = it },
-            onSave = { newContent ->
-                TaskRepository.updateTask(selectedTask!!.id, newContent)
-            },
-            onBack = {
-                if (isEditMode) {
-                    isEditMode = false
+                if (activity.exitOnBack) {
+                    activity.exitOnBack = false
+                    activity.finish()
                 } else {
-                    selectedTask = null
+                    activity.selectedTask = null
                 }
             }
+        }
+        BackHandler(onBack = handleBack)
+        NoteDetailScreen(
+            task = activity.selectedTask!!,
+            isEditMode = activity.isEditMode,
+            onEditModeChange = { activity.isEditMode = it },
+            onSave = { newContent ->
+                TaskRepository.updateTask(activity.selectedTask!!.id, newContent)
+            },
+            onBack = handleBack
         )
     } else {
         NavigationSuiteScaffold(
@@ -210,7 +227,6 @@ fun OpenTaskApp(
                     val destination = AppDestinations.entries[pageIndex]
                     when (destination) {
                         AppDestinations.HOME -> NotesScreen(
-                            onTaskClick = { selectedTask = it },
                             modifier = Modifier.fillMaxSize()
                         )
                         AppDestinations.FAVORITES -> Greeting("Favorites", Modifier.fillMaxSize())

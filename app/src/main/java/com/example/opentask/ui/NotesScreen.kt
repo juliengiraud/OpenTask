@@ -17,7 +17,6 @@ import com.example.opentask.model.TaskRepository
 
 @Composable
 fun NotesScreen(
-    onTaskClick: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val tasks = TaskRepository.tasks
@@ -39,7 +38,6 @@ fun NotesScreen(
         
         NotesList(
             tasks = tasks,
-            onTaskClick = onTaskClick,
             modifier = Modifier.weight(1f)
         )
     }

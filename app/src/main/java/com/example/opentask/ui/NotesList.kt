@@ -1,5 +1,6 @@
 package com.example.opentask.ui
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,14 +18,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.opentask.model.Task
 
 @Composable
 fun NotesList(
     tasks: List<Task>,
-    onTaskClick: (Task) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onTaskClick: (Task) -> Unit = getDefaultNoteClickHandler()
 ) {
     LazyColumn(
         modifier = modifier
@@ -44,6 +46,24 @@ fun NotesList(
                 Checkbox(checked = task.isDone, onCheckedChange = { })
             }
             Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
+}
+
+@Composable
+private fun getDefaultNoteClickHandler(): (Task) -> Unit {
+    val context = LocalContext.current
+    return { task ->
+        if (context is MainActivity) {
+            context.selectedTask = task
+        } else {
+            val intent = Intent(context, MainActivity::class.java).apply {
+                putExtra("TASK_ID", task.id)
+                putExtra("EXIT_ON_BACK", true)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            context.startActivity(intent)
+            // We do NOT finish() here so that we can return to this activity when MainActivity finishes
         }
     }
 }

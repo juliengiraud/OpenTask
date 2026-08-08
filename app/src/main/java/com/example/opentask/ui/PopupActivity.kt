@@ -66,7 +66,6 @@ class PopupActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(16.dp))
                         NotesList(
                             tasks = TaskRepository.tasks,
-                            onTaskClick = { /* Maybe open MainActivity or just ignore for now */ },
                             modifier = Modifier.weight(1f)
                         )
                     }
