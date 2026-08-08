@@ -1,6 +1,5 @@
 package com.example.opentask.ui
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,16 +53,10 @@ fun NotesList(
 private fun getDefaultNoteClickHandler(): (Task) -> Unit {
     val context = LocalContext.current
     return { task ->
-        if (context is MainActivity) {
-            context.selectedTask = task
-        } else {
-            val intent = Intent(context, MainActivity::class.java).apply {
-                putExtra("TASK_ID", task.id)
-                putExtra("EXIT_ON_BACK", true)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            }
-            context.startActivity(intent)
-            // We do NOT finish() here so that we can return to this activity when MainActivity finishes
-        }
+        MainActivity.openTask(
+            context = context,
+            task = task,
+            exitOnBack = context !is MainActivity
+        )
     }
 }

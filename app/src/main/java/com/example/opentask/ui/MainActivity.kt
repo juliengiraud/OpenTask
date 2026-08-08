@@ -38,6 +38,46 @@ import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        private const val EXTRA_TASK_ID = "TASK_ID"
+        private const val EXTRA_IS_EDIT_MODE = "IS_EDIT_MODE"
+        private const val EXTRA_EXIT_ON_BACK = "EXIT_ON_BACK"
+
+        fun createIntent(
+            context: Context,
+            taskId: String,
+            isEditMode: Boolean = false,
+            exitOnBack: Boolean = false
+        ): Intent {
+            return Intent(context, MainActivity::class.java).apply {
+                putExtra(EXTRA_TASK_ID, taskId)
+                putExtra(EXTRA_IS_EDIT_MODE, isEditMode)
+                putExtra(EXTRA_EXIT_ON_BACK, exitOnBack)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+        }
+
+        fun openTask(
+            context: Context,
+            task: Task,
+            isEditMode: Boolean = false,
+            exitOnBack: Boolean = false
+        ) {
+            if (context is MainActivity) {
+                context.selectedTask = task
+                context.isEditMode = isEditMode
+                context.exitOnBack = exitOnBack
+            } else {
+                context.startActivity(createIntent(context, task.id, isEditMode, exitOnBack))
+            }
+        }
+
+        fun createNewTask(context: Context, exitOnBack: Boolean = false) {
+            val newTask = TaskRepository.createEmptyTask()
+            openTask(context, newTask, isEditMode = true, exitOnBack = exitOnBack)
+        }
+    }
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { _ -> }
@@ -137,8 +177,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        val taskId = intent?.getStringExtra("TASK_ID")
-        exitOnBack = intent?.getBooleanExtra("EXIT_ON_BACK", false) ?: false
+        val taskId = intent?.getStringExtra(EXTRA_TASK_ID)
+        exitOnBack = intent?.getBooleanExtra(EXTRA_EXIT_ON_BACK, false) ?: false
+        isEditMode = intent?.getBooleanExtra(EXTRA_IS_EDIT_MODE, false) ?: false
         if (taskId != null) {
             selectedTask = TaskRepository.tasks.find { it.id == taskId }
         }
@@ -204,9 +245,7 @@ fun OpenTaskApp(
             floatingActionButton = {
                 AddNoteButton(
                     onClick = {
-                        val newTask = TaskRepository.createEmptyTask()
-                        activity.selectedTask = newTask
-                        activity.isEditMode = true
+                        MainActivity.createNewTask(activity)
                     }
                 )
             }

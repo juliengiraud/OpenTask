@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.opentask.model.TaskRepository
@@ -54,20 +55,53 @@ class PopupActivity : ComponentActivity() {
                             .fillMaxWidth(0.9f)
                             .fillMaxHeight(0.5f)
                             .background(AppConfig.DefaultBackgroundColor, RoundedCornerShape(12.dp))
-                            .padding(16.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable(enabled = false) { }, // Prevent closing when clicking inside
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = formattedDate,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.Black
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        // Header
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(AppConfig.SubPanelBackgroundColor)
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = formattedDate,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.Black
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         NotesList(
                             tasks = TaskRepository.tasks,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 16.dp)
                         )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Footer Button
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(AppConfig.SubPanelBackgroundColor)
+                                .clickable {
+                                    MainActivity.createNewTask(this@PopupActivity, exitOnBack = true)
+                                }
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Ajouter",
+                                color = AppConfig.AddNoteButtonBackgroundColor,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
                     }
                 }
             }
