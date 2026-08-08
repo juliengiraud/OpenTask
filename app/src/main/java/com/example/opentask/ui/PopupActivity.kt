@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.opentask.service.MainService
 import com.example.opentask.ui.theme.OpenTaskTheme
+import com.example.opentask.util.DateUtils
 
 class PopupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +34,8 @@ class PopupActivity : ComponentActivity() {
             action = MainService.ACTION_INCREMENT
         }
         startService(incrementIntent)
+
+        val formattedDate = DateUtils.getTodayFormattedDate()
 
         setContent {
             OpenTaskTheme {
@@ -53,7 +56,7 @@ class PopupActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Popup Title",
+                            text = formattedDate,
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.Black
                         )
