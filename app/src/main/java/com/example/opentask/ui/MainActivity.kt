@@ -42,17 +42,20 @@ class MainActivity : ComponentActivity() {
         private const val EXTRA_TASK_ID = "TASK_ID"
         private const val EXTRA_IS_EDIT_MODE = "IS_EDIT_MODE"
         private const val EXTRA_EXIT_ON_BACK = "EXIT_ON_BACK"
+        private const val EXTRA_CREATE_NEW = "CREATE_NEW"
 
         fun createIntent(
             context: Context,
-            taskId: String,
+            taskId: String? = null,
             isEditMode: Boolean = false,
-            exitOnBack: Boolean = false
+            exitOnBack: Boolean = false,
+            createNew: Boolean = false
         ): Intent {
             return Intent(context, MainActivity::class.java).apply {
-                putExtra(EXTRA_TASK_ID, taskId)
+                if (taskId != null) putExtra(EXTRA_TASK_ID, taskId)
                 putExtra(EXTRA_IS_EDIT_MODE, isEditMode)
                 putExtra(EXTRA_EXIT_ON_BACK, exitOnBack)
+                putExtra(EXTRA_CREATE_NEW, createNew)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
         }
@@ -73,8 +76,12 @@ class MainActivity : ComponentActivity() {
         }
 
         fun createNewTask(context: Context, exitOnBack: Boolean = false) {
-            val newTask = TaskRepository.createEmptyTask()
-            openTask(context, newTask, isEditMode = true, exitOnBack = exitOnBack)
+            if (context is MainActivity) {
+                val newTask = TaskRepository.createEmptyTask()
+                openTask(context, newTask, isEditMode = true, exitOnBack = exitOnBack)
+            } else {
+                context.startActivity(createIntent(context, isEditMode = true, exitOnBack = exitOnBack, createNew = true))
+            }
         }
     }
 
@@ -178,9 +185,13 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val taskId = intent?.getStringExtra(EXTRA_TASK_ID)
+        val createNew = intent?.getBooleanExtra(EXTRA_CREATE_NEW, false) ?: false
         exitOnBack = intent?.getBooleanExtra(EXTRA_EXIT_ON_BACK, false) ?: false
         isEditMode = intent?.getBooleanExtra(EXTRA_IS_EDIT_MODE, false) ?: false
-        if (taskId != null) {
+        
+        if (createNew) {
+            selectedTask = TaskRepository.createEmptyTask()
+        } else if (taskId != null) {
             selectedTask = TaskRepository.tasks.find { it.id == taskId }
         }
     }
