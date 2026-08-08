@@ -16,23 +16,23 @@ This project should replace the usage of ColorNote
   - [x] same style
 - [/] Modal overview
   - [x] window displayed over current app with transparent background
-  - [ ] title
-  - [ ] list of items
-    - [ ] text
-      - [ ] action click
-        - [ ] open Task view
+  - [x] title
+  - [x] list of items
+    - [x] text
+      - [x] action click
+        - [x] open Task view
     - [ ] cross icon button
       - [ ] mark task as done
-  - [ ] quick add button
-    - [ ] create new task & open it
+  - [x] quick add button
+    - [x] create new task & open it
   - [ ] same style
-- [ ] Task view
-  - [ ] header
-    - [ ] back button
-      - [ ] call back action command
-    - [ ] task title
-    - [ ] edit button
-      - [ ] enter Task edit
+- [/] Task view
+  - [x] header
+    - [x] back button
+      - [x] call back action command
+    - [x] task title
+    - [x] edit button
+      - [x] enter Task edit
     - [ ] options icon
       - [ ] click show options items
         - [ ] done => mark as done
@@ -48,16 +48,16 @@ This project should replace the usage of ColorNote
           - [ ] text
           - [ ] 2 buttons
           - [ ] delete action on yes
-  - [ ] sub header
-    - [ ] text with last update or created at
+  - [/] sub header
+    - [/] text with last update or created at
     - [ ] date
       - [ ] click open Date settings view
-  - [ ] task content
-    - [ ] display task content
-    - [ ] double tap action
-      - [ ] enter Task edit:
-        - [ ] header changes
-          - [ ] back button become validate edit => click go back to view
+  - [/] task content
+    - [x] display task content
+    - [x] double tap action
+      - [x] enter Task edit:
+        - [/] header changes
+          - [/] back button become validate edit => click go back to view
           - [ ] title become editable and background change
           - [ ] edit button become color picker icon
             - [ ] click open color picker modal with transparent background
