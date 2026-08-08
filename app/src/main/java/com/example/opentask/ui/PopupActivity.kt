@@ -53,7 +53,7 @@ class PopupActivity : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxWidth(0.9f)
                             .fillMaxHeight(0.5f)
-                            .background(Color.White, RoundedCornerShape(12.dp))
+                            .background(AppConfig.DefaultBackgroundColor, RoundedCornerShape(12.dp))
                             .padding(16.dp)
                             .clickable(enabled = false) { }, // Prevent closing when clicking inside
                         horizontalAlignment = Alignment.CenterHorizontally

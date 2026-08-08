@@ -24,7 +24,7 @@ fun NotesScreen(
 
     Column(
         modifier = modifier
-            .background(Color(0xFFEEEEEE)) // Light grey background
+            .background(AppConfig.DefaultBackgroundColor)
             .padding(8.dp)
     ) {
         SubTopPanel {
