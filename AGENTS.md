@@ -43,3 +43,42 @@
   - `SubPanelBackgroundColor`: `0xFFE0E0E0` (Sub-headers, popup header/footer backgrounds).
   - `AddNoteButtonBackgroundColor`: Standard action green (`0xFF4CAF50`).
   - `AddNoteButtonIconColor`: Usually `Color.White`.
+
+## Target project structure
+
+Not ready yet, the goal as the app grow will be to organize the project into feature packages like this
+
+```md
+:root:
+- core
+  - data
+    - db
+  - domain
+  - presentation
+    - util
+- feat1
+  - data
+  - di
+    feat1Module => ex. fun provideXRepository
+  - domain
+    - user
+      GetUserUseCase
+      User
+      UserValidation
+  - presentation
+    - components
+    - usecase1
+      - components
+      usecase1Screen.tk
+      usecase1State
+    - usecase2
+      - components
+      usecase2Screen.tk
+      usecase2State
+- feat2
+  - data
+  - domain
+  - presentation
+- ui
+MainActivity.kt
+```
