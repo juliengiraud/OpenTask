@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -281,7 +280,9 @@ fun OpenTaskApp(
                     AppTabs.HOME -> NotesScreen(
                         modifier = Modifier.fillMaxSize()
                     )
-                    AppTabs.CALENDAR -> Greeting("Calendrier", Modifier.fillMaxSize())
+                    AppTabs.CALENDAR -> CalendarScreen(
+                        modifier = Modifier.fillMaxSize()
+                    )
                     AppTabs.SETTINGS -> SettingsScreen(
                         onSelectFolder = onSelectFolder,
                         onResetWatcher = onResetWatcher,
@@ -295,18 +296,8 @@ fun OpenTaskApp(
     }
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
-    OpenTaskTheme {
-        Greeting("Android")
-    }
+fun OpenTaskAppPreview() {
+    // We would need a mock activity here, or just preview the core layout
 }

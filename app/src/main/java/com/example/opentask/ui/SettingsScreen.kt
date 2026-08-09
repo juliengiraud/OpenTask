@@ -1,5 +1,6 @@
 package com.example.opentask.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -20,7 +21,9 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(16.dp)
+        modifier = modifier
+            .background(AppConfig.DefaultBackgroundColor)
+            .padding(16.dp)
     ) {
         Text(text = "Settings", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
