@@ -19,13 +19,20 @@ object DateUtils {
     }
 
     /**
+     * Returns the month and year of the given date in localized format.
+     * Example: "Octobre 2023"
+     */
+    fun formatMonthYear(date: LocalDate): String {
+        val locale = Locale.getDefault()
+        val monthName = date.month.getDisplayName(TextStyle.FULL, locale)
+        return "$monthName ${date.year}"
+    }
+
+    /**
      * Returns the current month and year in localized format.
      * Example: "Octobre 2023"
      */
     fun getCurrentMonthYear(): String {
-        val today = LocalDate.now()
-        val locale = Locale.getDefault()
-        val monthName = today.month.getDisplayName(TextStyle.FULL, locale)
-        return "$monthName ${today.year}"
+        return formatMonthYear(LocalDate.now())
     }
 }

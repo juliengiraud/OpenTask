@@ -1,33 +1,127 @@
 package com.example.opentask.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.opentask.R
 import com.example.opentask.util.DateUtils
+import java.time.LocalDate
 
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier
 ) {
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var totalDragY by remember { mutableFloatStateOf(0f) }
+    val dragThreshold = 50f // Minimum distance to trigger a swipe
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(AppConfig.DefaultBackgroundColor)
             .padding(8.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { totalDragY = 0f },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        totalDragY += dragAmount
+                    },
+                    onDragEnd = {
+                        if (totalDragY < -dragThreshold) {
+                            // Swipe Up -> Next Month
+                            selectedDate = selectedDate.plusMonths(1)
+                        } else if (totalDragY > dragThreshold) {
+                            // Swipe Down -> Previous Month
+                            selectedDate = selectedDate.minusMonths(1)
+                        }
+                    }
+                )
+            }
     ) {
-        SubTopPanel {
-            Text(
-                text = DateUtils.getCurrentMonthYear(),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.Black
-            )
+        SubTopPanel(contentPadding = PaddingValues(0.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CalendarHeaderSection(
+                    weight = 2f,
+                    onClick = { selectedDate = selectedDate.minusMonths(1) }
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_triangle_up),
+                        contentDescription = "Previous",
+                        tint = Color.Black,
+                        modifier = Modifier.offset(y = 1.dp)
+                    )
+                }
+                CalendarHeaderSection(
+                    weight = 3f,
+                    onClick = { /* Middle action */ }
+                ) {
+                    Text(
+                        text = DateUtils.formatMonthYear(selectedDate),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Black
+                    )
+                }
+                CalendarHeaderSection(
+                    weight = 2f,
+                    onClick = { selectedDate = selectedDate.plusMonths(1) }
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_triangle_down),
+                        contentDescription = "Next",
+                        tint = Color.Black,
+                        modifier = Modifier.offset(y = (-1).dp)
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun RowScope.CalendarHeaderSection(
+    weight: Float,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit = {}
+) {
+    Box(
+        modifier = Modifier
+            .weight(weight)
+            .fillMaxHeight()
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }

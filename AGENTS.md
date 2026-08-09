@@ -20,9 +20,11 @@
 - **Naming Conventions:**
   - Use **AppTabs** instead of "Destinations" or "Sections" for navigation items.
   - Avoid technical/boilerplate names like "Scaffold", "Shell", "Wrapper", or "Container" for structural UI components unless they are standard library names.
+- **Simplicity & Standard UI:** Keep the app as simple as possible. Prefer standard Android/Material 3 system behaviors and animations (like default ripples for clicks) over custom complex animations or custom selection indicators unless explicitly requested.
 - **Interaction & Feedback:**
   - When the user provides instructions on how to interact (meta-instructions), always add them to `AGENTS.md` to ensure they persist across sessions.
   - Address user questions directly and avoid treating questions about past actions as new tasks without answering them first.
+  - **Strict Scope Control:** When given specific feedback on a single aspect of a UI component (e.g., alignment), do not modify other aspects (e.g., size) unless explicitly requested. Stay strictly within the scope of the instruction.
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
 - **DRY Principle:**
   - Centralize navigation and task creation logic in `MainActivity.companion`.

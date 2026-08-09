@@ -1,6 +1,7 @@
 package com.example.opentask.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.ui.zIndex
 @Composable
 fun SubTopPanel(
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(8.dp),
     content: @Composable () -> Unit
 ) {
     Column(
@@ -22,7 +24,7 @@ fun SubTopPanel(
             .shadow(elevation = 2.dp)
             .zIndex(0.5f)
             .background(AppConfig.SubPanelBackgroundColor)
-            .padding(8.dp),
+            .padding(contentPadding),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         content()
