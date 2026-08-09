@@ -15,7 +15,7 @@ import com.example.opentask.ui.PopupActivity
 class AppNotificationManager(private val context: Context) {
 
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
-    private val channelId = "task_channel_v5"
+    private val channelId = "task_channel_v7"
     private val foregroundId = 1
 
     init {
@@ -29,6 +29,8 @@ class AppNotificationManager(private val context: Context) {
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = "Shows task progress"
+            enableVibration(false)
+            setSound(null, null)
         }
         notificationManager.createNotificationChannel(channel)
     }
@@ -40,7 +42,7 @@ class AppNotificationManager(private val context: Context) {
 
         val pendingIntent = PendingIntent.getActivity(
             context,
-            (System.currentTimeMillis() % Int.MAX_VALUE).toInt(),
+            0,
             popupIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -62,6 +64,8 @@ class AppNotificationManager(private val context: Context) {
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
             .build()
     }
 
