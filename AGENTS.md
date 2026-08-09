@@ -44,6 +44,13 @@
   - `AddNoteButtonBackgroundColor`: Standard action green (`0xFF4CAF50`).
   - `AddNoteButtonIconColor`: Usually `Color.White`.
 
+## Services & Notifications
+- **Permanent Notifications (Foreground Service):**
+  - To prevent a persistent notification from vibrating or making sound during updates (especially when the app restarts and calls `startForeground` again), use `.setSilent(true)` and `.setOnlyAlertOnce(true)` in the `NotificationCompat.Builder`.
+  - Even if `IMPORTANCE_DEFAULT` is used for the channel, vibration can be disabled via `enableVibration(false)` and `setSound(null, null)` on the `NotificationChannel` object.
+  - **Channel Rotation:** Android caches notification channel settings. If you change importance, sound, or vibration settings in code, you MUST increment the `channelId` (e.g., from `v5` to `v6`) for the changes to take effect on existing installs.
+  - **PendingIntent Stability:** Use a stable request code (e.g., `0`) in `PendingIntent.getActivity` for the notification's content intent. Using dynamic codes (like timestamps) can cause the system to treat every update as a new notification, leading to visual glitches or unwanted alerts.
+
 ## Target project structure
 
 Not ready yet, the goal as the app grow will be to organize the project into feature packages like this
