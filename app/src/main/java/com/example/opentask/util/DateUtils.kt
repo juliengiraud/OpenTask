@@ -17,4 +17,15 @@ object DateUtils {
         val monthName = today.month.getDisplayName(TextStyle.FULL, locale)
         return "$dayAbbr. ${today.dayOfMonth} $monthName"
     }
+
+    /**
+     * Returns the current month and year in localized format.
+     * Example: "Octobre 2023"
+     */
+    fun getCurrentMonthYear(): String {
+        val today = LocalDate.now()
+        val locale = Locale.getDefault()
+        val monthName = today.month.getDisplayName(TextStyle.FULL, locale)
+        return "$monthName ${today.year}"
+    }
 }
