@@ -210,7 +210,13 @@ fun OpenTaskApp(
     watchedFolder: String?,
     debugLogs: List<String>
 ) {
-    val pagerState = rememberPagerState(pageCount = { AppTabs.entries.size })
+    val actualPageCount = AppTabs.entries.size
+    val virtualPageCount = 1000 * actualPageCount
+    val initialPage = virtualPageCount / 2
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { virtualPageCount }
+    )
     val scope = rememberCoroutineScope()
 
     if (activity.selectedTask != null) {
@@ -240,15 +246,18 @@ fun OpenTaskApp(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                val currentTab = AppTabs.entries[pagerState.currentPage]
+                val currentTab = AppTabs.entries[pagerState.currentPage % actualPageCount]
                 TopPanel(title = currentTab.label)
             },
             bottomBar = {
                 MainBottomBar(
-                    selectedTabIndex = pagerState.currentPage,
+                    selectedTabIndex = pagerState.currentPage % actualPageCount,
                     onTabClick = { index ->
                         scope.launch {
-                            pagerState.scrollToPage(index)
+                            val currentVirtualPage = pagerState.currentPage
+                            val currentActualIndex = currentVirtualPage % actualPageCount
+                            val diff = index - currentActualIndex
+                            pagerState.scrollToPage(currentVirtualPage + diff)
                         }
                     }
                 )
@@ -267,7 +276,7 @@ fun OpenTaskApp(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) { pageIndex ->
-                val tab = AppTabs.entries[pageIndex]
+                val tab = AppTabs.entries[pageIndex % actualPageCount]
                 when (tab) {
                     AppTabs.HOME -> NotesScreen(
                         modifier = Modifier.fillMaxSize()
