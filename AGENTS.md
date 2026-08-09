@@ -20,6 +20,9 @@
 - **Naming Conventions:**
   - Use **AppTabs** instead of "Destinations" or "Sections" for navigation items.
   - Avoid technical/boilerplate names like "Scaffold", "Shell", "Wrapper", or "Container" for structural UI components unless they are standard library names.
+- **Interaction & Feedback:**
+  - When the user provides instructions on how to interact (meta-instructions), always add them to `AGENTS.md` to ensure they persist across sessions.
+  - Address user questions directly and avoid treating questions about past actions as new tasks without answering them first.
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
 - **DRY Principle:**
   - Centralize navigation and task creation logic in `MainActivity.companion`.

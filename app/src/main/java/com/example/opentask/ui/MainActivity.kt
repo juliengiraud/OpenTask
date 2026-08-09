@@ -281,7 +281,7 @@ fun OpenTaskApp(
                     AppTabs.HOME -> NotesScreen(
                         modifier = Modifier.fillMaxSize()
                     )
-                    AppTabs.FAVORITES -> Greeting("Favorites", Modifier.fillMaxSize())
+                    AppTabs.CALENDAR -> Greeting("Calendrier", Modifier.fillMaxSize())
                     AppTabs.SETTINGS -> SettingsScreen(
                         onSelectFolder = onSelectFolder,
                         onResetWatcher = onResetWatcher,

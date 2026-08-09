@@ -6,7 +6,7 @@ enum class AppTabs(
     val label: String,
     val icon: Int,
 ) {
-    HOME("Notes", R.drawable.ic_event),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
+    HOME("Notes", R.drawable.ic_note),
+    CALENDAR("Calendrier", R.drawable.ic_event),
     SETTINGS("Settings", R.drawable.ic_settings),
 }
