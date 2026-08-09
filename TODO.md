@@ -102,13 +102,13 @@ This project should replace the usage of ColorNote
   - [ ] cancel/validate buttons
     - [ ] save changes to obsidian
   - [ ] same style
-- [/] Calendar view => native calendars ?
-  - [/] swipe to open All notes view
-  - [ ] header with text
-  - [ ] sub header
-    - [ ] previous month button
-    - [ ] current month
-    - [ ] next month button
+- [/] Calendar view
+  - [x] swipe to open All notes view
+  - [x] header with text
+  - [x] sub header
+    - [x] previous month button
+    - [x] current month
+    - [x] next month button
   - [ ] week days names header
   - [ ] all month rows
     - [ ] daily cards
@@ -124,7 +124,7 @@ This project should replace the usage of ColorNote
   - [/] same style
 - [/] bottom menu
   - [x] all notes icon
-  - [ ] calendar icon
+  - [x] calendar icon
   - [ ] search button
     - [ ] open search bar on top with focus
     - [ ] clear search button when text in
