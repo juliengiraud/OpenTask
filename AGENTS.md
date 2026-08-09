@@ -20,7 +20,7 @@
 - **Naming Conventions:**
   - Use **AppTabs** instead of "Destinations" or "Sections" for navigation items.
   - Avoid technical/boilerplate names like "Scaffold", "Shell", "Wrapper", or "Container" for structural UI components unless they are standard library names.
-- **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values or padding in UI components.
+- **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
 - **DRY Principle:**
   - Centralize navigation and task creation logic in `MainActivity.companion`.
   - Use `MainActivity.openTask()` and `MainActivity.createNewTask()` for consistent behavior across the app and popups.

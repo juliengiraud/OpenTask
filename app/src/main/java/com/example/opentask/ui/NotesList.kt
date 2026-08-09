@@ -3,6 +3,7 @@ package com.example.opentask.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,11 +26,13 @@ import com.example.opentask.model.Task
 fun NotesList(
     tasks: List<Task>,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
     onTaskClick: (Task) -> Unit = getDefaultNoteClickHandler()
 ) {
     LazyColumn(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxWidth(),
+        contentPadding = contentPadding
     ) {
         items(tasks) { task ->
             Row(
