@@ -1,5 +1,6 @@
 package com.example.opentask.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -83,7 +85,7 @@ fun CalendarScreen(
                         painter = painterResource(id = R.drawable.ic_triangle_up),
                         contentDescription = "Previous",
                         tint = Color.Black,
-                        modifier = Modifier.offset(y = 1.dp)
+                        modifier = Modifier.offset(y = 2.dp)
                     )
                 }
                 CalendarHeaderSection(
@@ -104,7 +106,7 @@ fun CalendarScreen(
                         painter = painterResource(id = R.drawable.ic_triangle_down),
                         contentDescription = "Next",
                         tint = Color.Black,
-                        modifier = Modifier.offset(y = (-1).dp)
+                        modifier = Modifier.offset(y = (-2).dp)
                     )
                 }
             }
@@ -131,13 +133,91 @@ fun CalendarScreen(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 4.dp),
+                        .padding(start = 2.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Text(
                         text = dayLabel,
                         color = color,
                         style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+
+        // Calendar Grid
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 8.dp)
+        ) {
+            val firstOfMonth = selectedDate.withDayOfMonth(1)
+            val startOffset = firstOfMonth.dayOfWeek.value - 1
+
+            // Day numbers and backgrounds
+            Column(modifier = Modifier.fillMaxSize()) {
+                repeat(6) { row ->
+                    Row(modifier = Modifier.weight(1f)) {
+                        repeat(7) { col ->
+                            val index = row * 7 + col
+                            val targetDate = firstOfMonth.plusDays(index.toLong() - startOffset)
+                            val isInMonth = targetDate.month == selectedDate.month
+                            
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .background(if (isInMonth) Color.White else AppConfig.CalendarOutOfMonthColor)
+                                    .padding(start = 4.dp, top = 0.dp),
+                                contentAlignment = Alignment.TopStart
+                            ) {
+                                val textColor = if (isInMonth) {
+                                    when (col) {
+                                        5 -> AppConfig.CalendarSaturdayColor
+                                        6 -> AppConfig.CalendarSundayColor
+                                        else -> AppConfig.CalendarWeekdayColor
+                                    }
+                                } else {
+                                    Color.Gray
+                                }
+                                Text(
+                                    text = targetDate.dayOfMonth.toString(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = textColor
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Grid lines (drawn on top of backgrounds)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val strokeWidth = 0.5.dp.toPx()
+                val columns = 7
+                val rows = 6
+                val cellWidth = size.width / columns
+                val cellHeight = size.height / rows
+
+                // Draw vertical lines
+                for (i in 0..columns) {
+                    val x = i * cellWidth
+                    drawLine(
+                        color = AppConfig.CalendarGridLineColor,
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = strokeWidth
+                    )
+                }
+
+                // Draw horizontal lines
+                for (i in 0..rows) {
+                    val y = i * cellHeight
+                    drawLine(
+                        color = AppConfig.CalendarGridLineColor,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth
                     )
                 }
             }

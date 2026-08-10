@@ -15,4 +15,7 @@ object AppConfig {
     val CalendarWeekdayColor = Color.Black
     val CalendarSaturdayColor = Color.Blue
     val CalendarSundayColor = Color.Red
+    
+    val CalendarGridLineColor = Color.DarkGray
+    val CalendarOutOfMonthColor = Color(0xFFF5F5F5) // Lighter than DefaultBackgroundColor
 }
