@@ -109,10 +109,10 @@ This project should replace the usage of ColorNote
     - [x] previous month button
     - [x] current month
     - [x] next month button
-  - [ ] week days names header
-  - [ ] all month rows
-    - [ ] daily cards
-      - [ ] number of the day
+  - [x] week days names header
+  - [x] all month rows
+    - [x] daily cards
+      - [x] number of the day
       - [ ] a square for each task in the selected color
       - [ ] click on day open Modal overview with 0 opacity in background
   - [ ] same style
@@ -141,3 +141,4 @@ This project should replace the usage of ColorNote
   - [ ] display it as "use another vault" like on Obsidian
   - [ ] reset button switch back to default vault
 - [ ] clean project structure
+- [ ] display week number
