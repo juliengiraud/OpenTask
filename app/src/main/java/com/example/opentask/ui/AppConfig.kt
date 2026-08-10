@@ -11,4 +11,8 @@ object AppConfig {
     val SubPanelBackgroundColor = Color(0xFFE0E0E0)
 
     val NotesListBottomPadding = 64.dp
+
+    val CalendarWeekdayColor = Color.Black
+    val CalendarSaturdayColor = Color.Blue
+    val CalendarSundayColor = Color.Red
 }

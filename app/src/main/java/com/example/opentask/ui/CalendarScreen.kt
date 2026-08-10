@@ -31,7 +31,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.opentask.R
 import com.example.opentask.util.DateUtils
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun CalendarScreen(
@@ -102,6 +105,39 @@ fun CalendarScreen(
                         contentDescription = "Next",
                         tint = Color.Black,
                         modifier = Modifier.offset(y = (-1).dp)
+                    )
+                }
+            }
+        }
+
+        // Days of week header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+        ) {
+            val days = DayOfWeek.entries
+            val locale = Locale.getDefault()
+            days.forEachIndexed { index, day ->
+                val color = when (index) {
+                    5 -> AppConfig.CalendarSaturdayColor
+                    6 -> AppConfig.CalendarSundayColor
+                    else -> AppConfig.CalendarWeekdayColor
+                }
+                val dayLabel = day.getDisplayName(TextStyle.FULL, locale)
+                    .take(3)
+                    .uppercase() + "."
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 4.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = dayLabel,
+                        color = color,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
