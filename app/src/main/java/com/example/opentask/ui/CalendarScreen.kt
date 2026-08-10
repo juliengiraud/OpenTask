@@ -26,8 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -154,7 +157,7 @@ fun CalendarScreen(
             val firstOfMonth = selectedDate.withDayOfMonth(1)
             val startOffset = firstOfMonth.dayOfWeek.value - 1
 
-            // Day numbers and backgrounds
+            // 1. Backgrounds and Day Numbers
             Column(modifier = Modifier.fillMaxSize()) {
                 repeat(6) { row ->
                     Row(modifier = Modifier.weight(1f)) {
@@ -191,15 +194,15 @@ fun CalendarScreen(
                 }
             }
 
-            // Grid lines (drawn on top of backgrounds)
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            // 2. Grid lines and Today Highlight
+            Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 val strokeWidth = 0.5.dp.toPx()
                 val columns = 7
                 val rows = 6
                 val cellWidth = size.width / columns
                 val cellHeight = size.height / rows
 
-                // Draw vertical lines
+                // Draw gray vertical lines
                 for (i in 0..columns) {
                     val x = i * cellWidth
                     drawLine(
@@ -210,7 +213,7 @@ fun CalendarScreen(
                     )
                 }
 
-                // Draw horizontal lines
+                // Draw gray horizontal lines
                 for (i in 0..rows) {
                     val y = i * cellHeight
                     drawLine(
@@ -219,6 +222,33 @@ fun CalendarScreen(
                         end = Offset(size.width, y),
                         strokeWidth = strokeWidth
                     )
+                }
+
+                // Draw Today's Blue Highlight (on top of gray lines)
+                val today = LocalDate.now()
+                val todayIndex = startOffset + today.dayOfMonth - 1
+                if (today.month == selectedDate.month && todayIndex in 0 until 42) {
+                    val r = todayIndex / 7
+                    val c = todayIndex % 7
+                    val x = c * cellWidth
+                    val y = r * cellHeight
+                    val blue = AppConfig.CalendarCurrentDayBorderColor
+                    val thickStroke = AppConfig.CalendarCurrentDayBorderWidth.toPx()
+
+                    // Draw inner border
+                    drawRect(
+                        color = blue,
+                        topLeft = Offset(x + thickStroke / 2, y + thickStroke / 2),
+                        size = Size(cellWidth - thickStroke, cellHeight - thickStroke),
+                        style = Stroke(width = thickStroke)
+                    )
+
+                    // Also draw the grid lines in blue for this cell to ensure full coverage
+                    val stroke = 0.5.dp.toPx()
+                    drawLine(blue, Offset(x, y), Offset(x + cellWidth, y), stroke)
+                    drawLine(blue, Offset(x, y + cellHeight), Offset(x + cellWidth, y + cellHeight), stroke)
+                    drawLine(blue, Offset(x, y), Offset(x, y + cellHeight), stroke)
+                    drawLine(blue, Offset(x + cellWidth, y), Offset(x + cellWidth, y + cellHeight), stroke)
                 }
             }
         }

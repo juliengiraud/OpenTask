@@ -18,4 +18,6 @@ object AppConfig {
     
     val CalendarGridLineColor = Color.DarkGray
     val CalendarOutOfMonthColor = Color(0xFFF5F5F5) // Lighter than DefaultBackgroundColor
+    val CalendarCurrentDayBorderColor = Color(0xFF64B5F6)
+    val CalendarCurrentDayBorderWidth = 2.5.dp
 }
