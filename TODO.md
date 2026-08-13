@@ -141,4 +141,4 @@ This project should replace the usage of ColorNote
   - [ ] display it as "use another vault" like on Obsidian
   - [ ] reset button switch back to default vault
 - [ ] clean project structure
-- [ ] display week number
+- [x] display week number

@@ -1,9 +1,14 @@
 package com.example.opentask.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 object AppConfig {
+    var showWeekNumber by mutableStateOf(true)
+
     val DefaultBackgroundColor = Color(0xFFEEEEEE)
     val AddNoteButtonBackgroundColor = Color(0xFF4CAF50) // A nice green
     val AddNoteButtonIconColor = Color.White

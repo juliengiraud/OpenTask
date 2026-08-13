@@ -31,6 +31,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -39,6 +40,7 @@ import com.example.opentask.util.DateUtils
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
+import java.time.temporal.WeekFields
 import java.util.Locale
 
 @Composable
@@ -121,8 +123,20 @@ fun CalendarScreen(
                 .fillMaxWidth()
                 .padding(top = 8.dp)
         ) {
-            val days = DayOfWeek.entries
             val locale = Locale.getDefault()
+            val showWeekNumber = AppConfig.showWeekNumber
+            
+            // Week header "W"
+            if (showWeekNumber) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                }
+            }
+
+            val days = DayOfWeek.entries
             days.forEachIndexed { index, day ->
                 val color = when (index) {
                     5 -> AppConfig.CalendarSaturdayColor
@@ -135,8 +149,8 @@ fun CalendarScreen(
 
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 2.dp),
+                        .weight(if (showWeekNumber) 2f else 1f)
+                        .padding(start = if (showWeekNumber) 2.dp else 4.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Text(
@@ -156,11 +170,32 @@ fun CalendarScreen(
         ) {
             val firstOfMonth = selectedDate.withDayOfMonth(1)
             val startOffset = firstOfMonth.dayOfWeek.value - 1
+            val weekFields = WeekFields.of(Locale.getDefault())
+            val showWeekNumber = AppConfig.showWeekNumber
 
             // 1. Backgrounds and Day Numbers
             Column(modifier = Modifier.fillMaxSize()) {
                 repeat(6) { row ->
                     Row(modifier = Modifier.weight(1f)) {
+                        if (showWeekNumber) {
+                            val firstDayOfRow = firstOfMonth.plusDays(row * 7L - startOffset)
+                            val weekNumber = firstDayOfRow.get(weekFields.weekOfYear())
+
+                            // Week number cell
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = weekNumber.toString(),
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+
                         repeat(7) { col ->
                             val index = row * 7 + col
                             val targetDate = firstOfMonth.plusDays(index.toLong() - startOffset)
@@ -168,7 +203,7 @@ fun CalendarScreen(
                             
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
+                                    .weight(if (showWeekNumber) 2f else 1f)
                                     .fillMaxHeight()
                                     .background(if (isInMonth) Color.White else AppConfig.CalendarOutOfMonthColor)
                                     .padding(start = 4.dp, top = 0.dp),
@@ -197,14 +232,19 @@ fun CalendarScreen(
             // 2. Grid lines and Today Highlight
             Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 val strokeWidth = 0.5.dp.toPx()
-                val columns = 7
+                val totalUnits = if (showWeekNumber) 15f else 7f
+                val unitWidth = size.width / totalUnits
+                val weekWidth = if (showWeekNumber) unitWidth else 0f
+                val dayWidth = if (showWeekNumber) unitWidth * 2f else unitWidth
                 val rows = 6
-                val cellWidth = size.width / columns
                 val cellHeight = size.height / rows
 
-                // Draw gray vertical lines
-                for (i in 0..columns) {
-                    val x = i * cellWidth
+                // Draw vertical lines
+                // Vertical lines between and after day columns (no lines for week column)
+                val startI = if (showWeekNumber) 0 else 0
+                val endI = 7
+                for (i in 0..7) {
+                    val x = weekWidth + i * dayWidth
                     drawLine(
                         color = AppConfig.CalendarGridLineColor,
                         start = Offset(x, 0f),
@@ -212,13 +252,23 @@ fun CalendarScreen(
                         strokeWidth = strokeWidth
                     )
                 }
+                
+                // If not showing week number, we need the very first vertical line at 0
+                if (!showWeekNumber) {
+                     drawLine(
+                        color = AppConfig.CalendarGridLineColor,
+                        start = Offset(0f, 0f),
+                        end = Offset(0f, size.height),
+                        strokeWidth = strokeWidth
+                    )
+                }
 
-                // Draw gray horizontal lines
+                // Draw gray horizontal lines (starting after the week column)
                 for (i in 0..rows) {
                     val y = i * cellHeight
                     drawLine(
                         color = AppConfig.CalendarGridLineColor,
-                        start = Offset(0f, y),
+                        start = Offset(weekWidth, y),
                         end = Offset(size.width, y),
                         strokeWidth = strokeWidth
                     )
@@ -230,7 +280,7 @@ fun CalendarScreen(
                 if (today.month == selectedDate.month && todayIndex in 0 until 42) {
                     val r = todayIndex / 7
                     val c = todayIndex % 7
-                    val x = c * cellWidth
+                    val x = weekWidth + c * dayWidth
                     val y = r * cellHeight
                     val blue = AppConfig.CalendarCurrentDayBorderColor
                     val thickStroke = AppConfig.CalendarCurrentDayBorderWidth.toPx()
@@ -239,16 +289,16 @@ fun CalendarScreen(
                     drawRect(
                         color = blue,
                         topLeft = Offset(x + thickStroke / 2, y + thickStroke / 2),
-                        size = Size(cellWidth - thickStroke, cellHeight - thickStroke),
+                        size = Size(dayWidth - thickStroke, cellHeight - thickStroke),
                         style = Stroke(width = thickStroke)
                     )
 
                     // Also draw the grid lines in blue for this cell to ensure full coverage
                     val stroke = 0.5.dp.toPx()
-                    drawLine(blue, Offset(x, y), Offset(x + cellWidth, y), stroke)
-                    drawLine(blue, Offset(x, y + cellHeight), Offset(x + cellWidth, y + cellHeight), stroke)
+                    drawLine(blue, Offset(x, y), Offset(x + dayWidth, y), stroke)
+                    drawLine(blue, Offset(x, y + cellHeight), Offset(x + dayWidth, y + cellHeight), stroke)
                     drawLine(blue, Offset(x, y), Offset(x, y + cellHeight), stroke)
-                    drawLine(blue, Offset(x + cellWidth, y), Offset(x + cellWidth, y + cellHeight), stroke)
+                    drawLine(blue, Offset(x + dayWidth, y), Offset(x + dayWidth, y + cellHeight), stroke)
                 }
             }
         }
