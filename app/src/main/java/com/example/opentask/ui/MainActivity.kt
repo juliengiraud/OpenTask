@@ -211,7 +211,7 @@ fun OpenTaskApp(
 ) {
     val actualPageCount = AppTabs.entries.size
     val virtualPageCount = 1000 * actualPageCount
-    val initialPage = virtualPageCount / 2
+    val initialPage = (virtualPageCount / 2) + AppTabs.entries.indexOf(AppTabs.CALENDAR)
     val pagerState = rememberPagerState(
         initialPage = initialPage,
         pageCount = { virtualPageCount }
