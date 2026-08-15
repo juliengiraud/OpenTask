@@ -20,9 +20,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -218,6 +221,17 @@ fun OpenTaskApp(
     )
     val scope = rememberCoroutineScope()
 
+    var lastKnownPage by remember { mutableIntStateOf(pagerState.currentPage) }
+    val navigationStack = remember { mutableStateListOf<Int>() }
+    var isBackNavigating by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (!isBackNavigating && pagerState.currentPage != lastKnownPage) {
+            navigationStack.add(lastKnownPage)
+            lastKnownPage = pagerState.currentPage
+        }
+    }
+
     if (activity.selectedTask != null) {
         val handleBack = {
             if (activity.isEditMode) {
@@ -242,6 +256,15 @@ fun OpenTaskApp(
             onBack = handleBack
         )
     } else {
+        BackHandler(enabled = navigationStack.isNotEmpty()) {
+            scope.launch {
+                val target = navigationStack.removeAt(navigationStack.size - 1)
+                isBackNavigating = true
+                pagerState.animateScrollToPage(target)
+                lastKnownPage = target
+                isBackNavigating = false
+            }
+        }
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
@@ -256,7 +279,7 @@ fun OpenTaskApp(
                             val currentVirtualPage = pagerState.currentPage
                             val currentActualIndex = currentVirtualPage % actualPageCount
                             val diff = index - currentActualIndex
-                            pagerState.scrollToPage(currentVirtualPage + diff)
+                            pagerState.animateScrollToPage(currentVirtualPage + diff)
                         }
                     }
                 )
