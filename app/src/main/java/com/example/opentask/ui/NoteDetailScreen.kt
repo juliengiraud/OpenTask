@@ -1,6 +1,7 @@
 package com.example.opentask.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -38,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
@@ -57,24 +60,39 @@ fun NoteDetailScreen(
 ) {
     var isParsedMode by remember { mutableStateOf(false) }
     var currentTaskState by remember(task.id) { mutableStateOf(task) }
+    var titleValue by remember(task.id) { mutableStateOf(task.title) }
+    var isTitleFocused by remember { mutableStateOf(false) }
 
     var textFieldValue by remember(task.id) { 
         mutableStateOf(TextFieldValue(task.toRaw())) 
     }
-    val focusRequester = remember { FocusRequester() }
+    val titleFocusRequester = remember { FocusRequester() }
+    val bodyFocusRequester = remember { FocusRequester() }
 
     val handleSave = { content: String ->
-        val toSave = if (isParsedMode) {
-            currentTaskState.copy(textContent = content).toRaw()
-        } else {
-            content
-        }
+        val toSave = currentTaskState.copy(title = titleValue, textContent = content).toRaw()
         onSave(toSave)
     }
 
     LaunchedEffect(isEditMode) {
         if (isEditMode) {
-            focusRequester.requestFocus()
+            if (!isParsedMode) {
+                // Force switch to parsed mode for editing
+                val newTask = Task.fromRaw(task.filename, textFieldValue.text)
+                currentTaskState = newTask
+                textFieldValue = TextFieldValue(
+                    text = newTask.textContent,
+                    selection = TextRange(newTask.textContent.length)
+                )
+                titleValue = newTask.title
+                isParsedMode = true
+            }
+            
+            if (titleValue.isEmpty()) {
+                titleFocusRequester.requestFocus()
+            } else {
+                bodyFocusRequester.requestFocus()
+            }
         }
     }
 
@@ -100,7 +118,10 @@ fun NoteDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         text = "←",
                         style = MaterialTheme.typography.headlineMedium,
@@ -108,11 +129,34 @@ fun NoteDetailScreen(
                             .clickable { onBack() }
                             .padding(end = 12.dp)
                     )
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        maxLines = 1
-                    )
+                    
+                    if (isEditMode) {
+                        val shape = RoundedCornerShape(4.dp)
+                        BasicTextField(
+                            value = titleValue,
+                            onValueChange = { titleValue = it },
+                            textStyle = MaterialTheme.typography.headlineMedium.copy(color = Color.Black),
+                            modifier = Modifier
+                                .weight(1f)
+                                .onFocusChanged { isTitleFocused = it.isFocused }
+                                .background(Color.White, shape = shape)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isTitleFocused) AppConfig.EditorFocusBorderColor else Color.Transparent,
+                                    shape = shape
+                                )
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .focusRequester(titleFocusRequester),
+                            singleLine = true
+                        )
+                    } else {
+                        Text(
+                            text = titleValue,
+                            style = MaterialTheme.typography.headlineMedium,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
                 Text(
@@ -122,10 +166,6 @@ fun NoteDetailScreen(
                         .clickable { 
                             if (isEditMode) {
                                 handleSave(textFieldValue.text)
-                            } else {
-                                textFieldValue = textFieldValue.copy(
-                                    selection = TextRange(textFieldValue.text.length)
-                                )
                             }
                             onEditModeChange(!isEditMode) 
                         }
@@ -154,15 +194,17 @@ fun NoteDetailScreen(
 
                 Switch(
                     checked = isParsedMode,
+                    enabled = !isEditMode,
                     onCheckedChange = { checked ->
                         if (checked) {
                             // Raw -> Parsed
                             val newTask = Task.fromRaw(task.filename, textFieldValue.text)
                             currentTaskState = newTask
                             textFieldValue = TextFieldValue(newTask.textContent)
+                            titleValue = newTask.title
                         } else {
                             // Parsed -> Raw
-                            val raw = currentTaskState.copy(textContent = textFieldValue.text).toRaw()
+                            val raw = currentTaskState.copy(title = titleValue, textContent = textFieldValue.text).toRaw()
                             textFieldValue = TextFieldValue(raw)
                         }
                         isParsedMode = checked
@@ -184,7 +226,7 @@ fun NoteDetailScreen(
             onValueChange = { textFieldValue = it },
             isEditMode = isEditMode,
             onEditModeChange = onEditModeChange,
-            focusRequester = focusRequester,
+            focusRequester = bodyFocusRequester,
             modifier = Modifier.weight(1f)
         )
     }
@@ -239,6 +281,23 @@ private fun NoteEditorPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = viewportHeight)
+                    .pointerInput(isEditMode, textLayoutResult) {
+                        if (isEditMode) {
+                            detectTapGestures { offset ->
+                                val textHeight = textLayoutResult?.size?.height ?: 0
+                                val paddingTopPx = 16.dp.toPx()
+                                if (offset.y > textHeight + paddingTopPx) {
+                                    focusRequester.requestFocus()
+                                    // Move cursor to end if clicking empty space
+                                    onValueChange(
+                                        textFieldValue.copy(
+                                            selection = TextRange(textFieldValue.text.length)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                     .drawBehind {
                         textLayoutResult?.let { layout ->
                             val strokeWidth = 0.5.dp.toPx()

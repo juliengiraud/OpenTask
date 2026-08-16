@@ -30,6 +30,10 @@
   - **Global Component Stability:** Shared components (like `TopPanel`) should not be modified unless a global change is explicitly requested. Do not attempt to "centralize" logic into global components if it causes side effects on other screens.
 - **Window Insets & Stability:** 
   - To prevent "jumping" headers or black status bars when the keyboard appears, ensure headers use `statusBarsPadding()` and the scrollable content uses `imePadding()` and `navigationBarsPadding()` within its own isolated container. This prevents the system from attempting to "pan" the entire root layout.
+- **Smart Interaction Preferences:**
+  - **Focus Management:** When opening an editor, if the title is empty (e.g., new note), focus the title field. Otherwise, focus the body content.
+  - **Empty Space Interaction:** In the editor, a tap on any empty space below the text should request focus and move the cursor to the end of the content.
+  - **Visual Feedback:** Use `AppConfig.EditorFocusBorderColor` (typically orange) for active focus borders in editors.
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
 - **Model-Driven Parsing:** Move all data-specific parsing and reconstruction logic (like Obsidian file handling) into the relevant model classes (e.g., `Task`). The UI should remain agnostic to the storage format and only handle presentation states (like toggling between parsed/raw views).
   - **Obsidian File Structure:**
