@@ -14,11 +14,17 @@ object TaskRepository {
         _tasks.addAll(newTasks)
     }
 
-    fun updateTask(context: Context, taskId: String, newContent: String) {
+    fun updateTask(context: Context, taskId: String, newRawContent: String) {
         val index = _tasks.indexOfFirst { it.id == taskId }
         if (index != -1) {
             val oldTask = _tasks[index]
-            val newTask = Task.fromRaw(oldTask.filename, newContent).copy(
+            
+            // Optimization: Don't save if content hasn't changed
+            if (oldTask.toRaw() == newRawContent) {
+                return
+            }
+
+            val newTask = Task.fromRaw(oldTask.filename, newRawContent).copy(
                 id = oldTask.id,
                 lastUpdate = java.time.LocalDateTime.now()
             )
@@ -78,6 +84,7 @@ object TaskRepository {
         val defaultYaml = "---\ncreation_date: $dateStr\n---"
         
         val newTask = Task(
+            id = filename,
             title = "",
             textContent = "",
             filename = filename,

@@ -249,11 +249,16 @@ fun OpenTaskApp(
             isEditMode = activity.isEditMode,
             onEditModeChange = { activity.isEditMode = it },
             onSave = { newContent ->
-                TaskRepository.updateTask(activity, activity.selectedTask!!.id, newContent)
-                // If it was deleted, clear the selected task to exit the screen
-                if (!TaskRepository.tasks.any { it.id == activity.selectedTask?.id }) {
+                val currentId = activity.selectedTask?.id ?: return@NoteDetailScreen
+                TaskRepository.updateTask(activity, currentId, newContent)
+                
+                // Refresh selected task from repo or exit if deleted
+                val updatedTask = TaskRepository.tasks.find { it.id == currentId }
+                if (updatedTask == null) {
                     activity.selectedTask = null
                     activity.isEditMode = false
+                } else {
+                    activity.selectedTask = updatedTask
                 }
             },
             onBack = handleBack

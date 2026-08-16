@@ -103,6 +103,7 @@ data class Task(
             val body = lines.drop(actualBodyStart).joinToString("\n")
 
             return Task(
+                id = filename,
                 title = title,
                 textContent = body,
                 filename = filename,
