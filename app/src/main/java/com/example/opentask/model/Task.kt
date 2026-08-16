@@ -123,7 +123,8 @@ data class Task(
         }
         // Always include title row, even if empty, with 1 empty line below
         sb.append("# ").append(title).append("\n\n")
-        sb.append(textContent)
+        // Ensure the content ends with at least one empty line
+        sb.append(textContent.trimEnd()).append("\n\n")
         return sb.toString()
     }
 }
