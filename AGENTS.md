@@ -31,6 +31,11 @@
 - **Window Insets & Stability:** 
   - To prevent "jumping" headers or black status bars when the keyboard appears, ensure headers use `statusBarsPadding()` and the scrollable content uses `imePadding()` and `navigationBarsPadding()` within its own isolated container. This prevents the system from attempting to "pan" the entire root layout.
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
+- **Model-Driven Parsing:** Move all data-specific parsing and reconstruction logic (like Obsidian file handling) into the relevant model classes (e.g., `Task`). The UI should remain agnostic to the storage format and only handle presentation states (like toggling between parsed/raw views).
+  - **Obsidian File Structure:**
+    - Raw format: YAML frontmatter -> 1 empty line -> `# Title` -> 1 empty line -> Inner Content.
+    - `Task.fromRaw` extracts the creation date strictly from the filename (`yyyy-MM-dd_HH-mm-ss.md`).
+    - `Task.toRaw` always enforces the standard spacing (1 empty line after YAML, 1 empty line after Title).
 - **DRY Principle:**
   - Centralize navigation and task creation logic in `MainActivity.companion`.
   - Use `MainActivity.openTask()` and `MainActivity.createNewTask()` for consistent behavior across the app and popups.

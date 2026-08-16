@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -54,10 +55,22 @@ fun NoteDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var isParsedMode by remember { mutableStateOf(false) }
+    var currentTaskState by remember(task.id) { mutableStateOf(task) }
+
     var textFieldValue by remember(task.id) { 
-        mutableStateOf(TextFieldValue(task.textContent)) 
+        mutableStateOf(TextFieldValue(task.toRaw())) 
     }
     val focusRequester = remember { FocusRequester() }
+
+    val handleSave = { content: String ->
+        val toSave = if (isParsedMode) {
+            currentTaskState.copy(textContent = content).toRaw()
+        } else {
+            content
+        }
+        onSave(toSave)
+    }
 
     LaunchedEffect(isEditMode) {
         if (isEditMode) {
@@ -108,7 +121,7 @@ fun NoteDetailScreen(
                     modifier = Modifier
                         .clickable { 
                             if (isEditMode) {
-                                onSave(textFieldValue.text)
+                                handleSave(textFieldValue.text)
                             } else {
                                 textFieldValue = textFieldValue.copy(
                                     selection = TextRange(textFieldValue.text.length)
@@ -137,6 +150,23 @@ fun NoteDetailScreen(
                     text = shortFilename,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Black
+                )
+
+                Switch(
+                    checked = isParsedMode,
+                    onCheckedChange = { checked ->
+                        if (checked) {
+                            // Raw -> Parsed
+                            val newTask = Task.fromRaw(task.filename, textFieldValue.text)
+                            currentTaskState = newTask
+                            textFieldValue = TextFieldValue(newTask.textContent)
+                        } else {
+                            // Parsed -> Raw
+                            val raw = currentTaskState.copy(textContent = textFieldValue.text).toRaw()
+                            textFieldValue = TextFieldValue(raw)
+                        }
+                        isParsedMode = checked
+                    }
                 )
                 
                 val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh-mm-ss")

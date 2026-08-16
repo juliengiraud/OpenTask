@@ -134,16 +134,7 @@ class FolderWatcherManager(
                 inputStream.bufferedReader().readText()
             } ?: return null
 
-            val lines = content.lines()
-            val titleRegex = Regex("^#+ *")
-            val title = lines.find { it.trim().startsWith("#") }
-                ?.let { it.trim().replace(titleRegex, "") }
-                ?: file.name?.removeSuffix(".md") ?: "Unknown"
-
-            Task(
-                title = title,
-                textContent = content,
-                filename = file.name ?: "Unknown",
+            Task.fromRaw(file.name ?: "Unknown", content).copy(
                 lastUpdate = LocalDateTime.ofInstant(
                     Instant.ofEpochMilli(file.lastModified()),
                     ZoneId.systemDefault()
