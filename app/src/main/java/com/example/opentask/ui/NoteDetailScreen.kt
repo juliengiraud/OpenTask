@@ -60,18 +60,23 @@ fun NoteDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     var isParsedMode by remember { mutableStateOf(false) }
-    var currentTaskState by remember(task.id) { mutableStateOf(task) }
-    var titleValue by remember(task.id) { mutableStateOf(task.title) }
+    var currentTaskState by remember(task) { mutableStateOf(task) }
+    var titleValue by remember(task) { mutableStateOf(task.title) }
     var isTitleFocused by remember { mutableStateOf(false) }
 
-    var textFieldValue by remember(task.id) { 
-        mutableStateOf(TextFieldValue(task.toRaw())) 
+    var textFieldValue by remember(task, isParsedMode) { 
+        val content = if (isParsedMode) task.textContent else task.toRaw()
+        mutableStateOf(TextFieldValue(content))
     }
     val titleFocusRequester = remember { FocusRequester() }
     val bodyFocusRequester = remember { FocusRequester() }
 
     val handleSave = { content: String ->
-        val toSave = currentTaskState.copy(title = titleValue, textContent = content).toRaw()
+        val toSave = if (isParsedMode) {
+            currentTaskState.copy(title = titleValue, textContent = content).toRaw()
+        } else {
+            content
+        }
         onSave(toSave)
     }
 

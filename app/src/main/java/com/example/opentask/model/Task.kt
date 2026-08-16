@@ -23,10 +23,12 @@ data class Task(
 
         fun fromRaw(filename: String, rawContent: String): Task {
             var createdAt = LocalDateTime.now()
+            var lastUpdate = LocalDateTime.now()
             try {
                 // Remove .md extension if present for parsing
                 val datePart = filename.removeSuffix(".md")
                 createdAt = LocalDateTime.parse(datePart, filenameFormatter)
+                lastUpdate = createdAt // Default to creation time if not in YAML
             } catch (e: DateTimeParseException) {
                 // Keep default now()
             }
@@ -67,6 +69,11 @@ data class Task(
                                     }
                                 }
                                 "hastime" -> hasTime = value.toBoolean()
+                                "last_update" -> {
+                                    try {
+                                        lastUpdate = LocalDateTime.parse(value, filenameFormatter)
+                                    } catch (e: Exception) {}
+                                }
                             }
                         }
                     }
@@ -108,6 +115,7 @@ data class Task(
                 textContent = body,
                 filename = filename,
                 createdAt = createdAt,
+                lastUpdate = lastUpdate,
                 yaml = yaml,
                 isDone = isDone,
                 dueDate = dueDate,
@@ -119,9 +127,45 @@ data class Task(
 
     fun toRaw(): String {
         val sb = StringBuilder()
-        if (yaml.isNotEmpty()) {
-            sb.append(yaml).append("\n\n")
+        
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
+        val createdAtStr = createdAt.format(formatter)
+        val lastUpdateStr = lastUpdate.format(formatter)
+        
+        sb.append("---\n")
+        sb.append("creation_date: ").append(createdAtStr).append("\n")
+        sb.append("last_update: ").append(lastUpdateStr).append("\n")
+        if (isDone) sb.append("done: true\n")
+        dueDate?.let {
+            if (hasTime) {
+                sb.append("due: ").append(it.toString()).append("\n")
+            } else {
+                sb.append("due: ").append(it.toLocalDate().toString()).append("\n")
+            }
         }
+        if (hasTime) sb.append("hastime: true\n")
+        
+        // Add any other existing YAML properties that aren't handled above
+        if (yaml.isNotEmpty()) {
+            val lines = yaml.lines()
+            // We want to skip the first and last lines (the --- delimiters)
+            // and also skip properties we've already handled
+            val propertyLines = if (lines.firstOrNull() == "---") {
+                val closingIndex = lines.drop(1).indexOf("---")
+                if (closingIndex != -1) {
+                    lines.subList(1, closingIndex + 1)
+                } else emptyList()
+            } else emptyList()
+
+            propertyLines.forEach { line ->
+                val key = line.split(":", limit = 2).firstOrNull()?.trim()?.lowercase()
+                if (key != null && key.isNotEmpty() && key !in listOf("creation_date", "last_update", "done", "completed", "due", "deadline", "hastime")) {
+                    sb.append(line).append("\n")
+                }
+            }
+        }
+        sb.append("---\n\n")
+
         // Always include title row, even if empty, with 1 empty line below
         sb.append("# ").append(title).append("\n\n")
         // Ensure the content ends with at least one empty line

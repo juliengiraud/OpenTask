@@ -81,7 +81,6 @@ object TaskRepository {
         val now = java.time.LocalDateTime.now()
         val dateStr = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
         val filename = "$dateStr.md"
-        val defaultYaml = "---\ncreation_date: $dateStr\n---"
         
         val newTask = Task(
             id = filename,
@@ -89,8 +88,7 @@ object TaskRepository {
             textContent = "",
             filename = filename,
             createdAt = now,
-            lastUpdate = now,
-            yaml = defaultYaml
+            lastUpdate = now
         )
         _tasks.add(0, newTask) // Add to the top of the list
         return newTask
