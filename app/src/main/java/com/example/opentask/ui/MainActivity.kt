@@ -251,7 +251,7 @@ fun OpenTaskApp(
             isEditMode = activity.isEditMode,
             onEditModeChange = { activity.isEditMode = it },
             onSave = { newContent ->
-                TaskRepository.updateTask(activity.selectedTask!!.id, newContent)
+                TaskRepository.updateTask(activity, activity.selectedTask!!.id, newContent)
                 // If it was deleted, clear the selected task to exit the screen
                 if (!TaskRepository.tasks.any { it.id == activity.selectedTask?.id }) {
                     activity.selectedTask = null
