@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -26,9 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,9 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import com.example.opentask.model.Task
 import java.time.format.DateTimeFormatter
@@ -58,7 +58,6 @@ fun NoteDetailScreen(
         mutableStateOf(TextFieldValue(task.textContent)) 
     }
     val focusRequester = remember { FocusRequester() }
-    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
     LaunchedEffect(isEditMode) {
         if (isEditMode) {
@@ -66,8 +65,12 @@ fun NoteDetailScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().background(Color.White)) {
-        // Top Panel
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
+        // Top Panel (Reverted to Column as per initial state)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -75,7 +78,8 @@ fun NoteDetailScreen(
                 .shadow(elevation = 4.dp)
                 .zIndex(1f)
                 .background(AppConfig.TopPanelBackgroundColor)
-                .padding(start = 16.dp, end = 16.dp, bottom = 4.dp, top = 16.dp),
+                .statusBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
             verticalArrangement = Arrangement.Bottom
         ) {
             Row(
@@ -106,7 +110,6 @@ fun NoteDetailScreen(
                             if (isEditMode) {
                                 onSave(textFieldValue.text)
                             } else {
-                                // When entering via icon, place cursor at the end
                                 textFieldValue = textFieldValue.copy(
                                     selection = TextRange(textFieldValue.text.length)
                                 )
@@ -145,94 +148,140 @@ fun NoteDetailScreen(
             }
         }
 
-        // Content
-        val scrollState = rememberScrollState()
-        val textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black)
-        
-        BoxWithConstraints(modifier = Modifier.fillMaxSize().weight(1f)) {
-            val minHeight = maxHeight
-            Column(
+        // Isolated Editor Panel
+        NoteEditorPanel(
+            textFieldValue = textFieldValue,
+            onValueChange = { textFieldValue = it },
+            isEditMode = isEditMode,
+            onEditModeChange = onEditModeChange,
+            focusRequester = focusRequester,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun NoteEditorPanel(
+    textFieldValue: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    isEditMode: Boolean,
+    onEditModeChange: (Boolean) -> Unit,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black)
+
+    // Auto-scroll logic isolated to the editor panel
+    LaunchedEffect(textFieldValue.selection, textLayoutResult, isEditMode) {
+        if (!isEditMode) return@LaunchedEffect
+        textLayoutResult?.let { layout ->
+            val cursorOffset = textFieldValue.selection.max
+            if (cursorOffset <= layout.layoutInput.text.length) {
+                val lineIndex = layout.getLineForOffset(cursorOffset)
+                val lineBottom = layout.getLineBottom(lineIndex)
+                val paddingTopPx = with(density) { 16.dp.toPx() }
+                val targetScroll = lineBottom + paddingTopPx
+                val buffer = with(density) { 48.dp.toPx() }
+                
+                if (scrollState.viewportSize > 0) {
+                    val isCursorBelowViewport = targetScroll + buffer > scrollState.value + scrollState.viewportSize
+                    if (isCursorBelowViewport) {
+                        scrollState.animateScrollTo((targetScroll + buffer - scrollState.viewportSize).toInt())
+                    }
+                }
+            }
+        }
+    }
+
+    BoxWithConstraints(modifier = modifier) {
+        val viewportHeight = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .imePadding()
+                .verticalScroll(scrollState)
+        ) {
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = minHeight - 32.dp)
-                        .drawBehind {
-                            textLayoutResult?.let { layout ->
-                                val strokeWidth = 0.5.dp.toPx()
-                                val lineCount = layout.lineCount
-                                if (lineCount > 0) {
-                                    // 1. Draw lines for all existing text lines
-                                    for (i in 0 until lineCount) {
-                                        val y = layout.getLineBottom(i) - strokeWidth / 2
-                                        drawLine(
-                                            color = Color(0xFFF2F2F2),
-                                            start = Offset(0f, y),
-                                            end = Offset(size.width, y),
-                                            strokeWidth = strokeWidth
-                                        )
-                                    }
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = viewportHeight)
+                    .drawBehind {
+                        textLayoutResult?.let { layout ->
+                            val strokeWidth = 0.5.dp.toPx()
+                            val lineCount = layout.lineCount
+                            val paddingTopPx = 16.dp.toPx()
+                            
+                            if (lineCount > 0) {
+                                // 1. Draw lines for all existing text lines
+                                for (i in 0 until lineCount) {
+                                    val y = paddingTopPx + layout.getLineBottom(i) - strokeWidth / 2
+                                    drawLine(
+                                        color = Color(0xFFF2F2F2),
+                                        start = Offset(0f, y),
+                                        end = Offset(size.width, y),
+                                        strokeWidth = strokeWidth
+                                    )
+                                }
 
-                                    // 2. Calculate average line height for the rest
-                                    val lineHeight = if (lineCount > 1) {
-                                        layout.getLineBottom(1) - layout.getLineBottom(0)
-                                    } else {
-                                        layout.getLineBottom(0)
-                                    }
+                                // 2. Calculate average line height for the rest
+                                val lineHeight = if (lineCount > 1) {
+                                    layout.getLineBottom(1) - layout.getLineBottom(0)
+                                } else {
+                                    layout.getLineBottom(0)
+                                }
 
-                                    // 3. Continue drawing lines until the end of the container
-                                    var currentY = layout.getLineBottom(lineCount - 1)
-                                    while (currentY + lineHeight <= size.height + strokeWidth) {
-                                        currentY += lineHeight
-                                        val drawY = currentY - strokeWidth / 2
-                                        drawLine(
-                                            color = Color(0xFFF2F2F2),
-                                            start = Offset(0f, drawY),
-                                            end = Offset(size.width, drawY),
-                                            strokeWidth = strokeWidth
-                                        )
-                                    }
+                                // 3. Continue drawing lines until the end of the container
+                                var currentY = paddingTopPx + layout.getLineBottom(lineCount - 1)
+                                while (currentY + lineHeight <= size.height + strokeWidth) {
+                                    currentY += lineHeight
+                                    val drawY = currentY - strokeWidth / 2
+                                    drawLine(
+                                        color = Color(0xFFF2F2F2),
+                                        start = Offset(0f, drawY),
+                                        end = Offset(size.width, drawY),
+                                        strokeWidth = strokeWidth
+                                    )
                                 }
                             }
                         }
-                ) {
-                    BasicTextField(
-                        value = textFieldValue,
-                        onValueChange = { textFieldValue = it },
-                        readOnly = !isEditMode,
-                        textStyle = textStyle,
-                        onTextLayout = { textLayoutResult = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester),
-                        decorationBox = { innerTextField ->
-                            innerTextField()
-                        }
-                    )
-
-                    if (!isEditMode) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onDoubleTap = { offset ->
-                                            textLayoutResult?.let { layout ->
-                                                val index = layout.getOffsetForPosition(offset)
-                                                textFieldValue = textFieldValue.copy(
-                                                    selection = TextRange(index)
-                                                )
-                                            }
-                                            onEditModeChange(true)
-                                        }
-                                    )
-                                }
-                        )
                     }
+                    .padding(horizontal = 12.dp)
+                    .padding(top = 16.dp, bottom = 48.dp)
+            ) {
+                BasicTextField(
+                    value = textFieldValue,
+                    onValueChange = onValueChange,
+                    readOnly = !isEditMode,
+                    textStyle = textStyle,
+                    onTextLayout = { textLayoutResult = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    decorationBox = { innerTextField ->
+                        innerTextField()
+                    }
+                )
+
+                if (!isEditMode) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onDoubleTap = { offset ->
+                                        textLayoutResult?.let { layout ->
+                                            val index = layout.getOffsetForPosition(offset)
+                                            onValueChange(textFieldValue.copy(selection = TextRange(index)))
+                                        }
+                                        onEditModeChange(true)
+                                    }
+                                )
+                            }
+                    )
                 }
             }
         }

@@ -23,8 +23,13 @@
 - **Simplicity & Standard UI:** Keep the app as simple as possible. Prefer standard Android/Material 3 system behaviors and animations (like default ripples for clicks) over custom complex animations or custom selection indicators unless explicitly requested.
 - **Interaction & Feedback:**
   - When the user provides instructions on how to interact (meta-instructions), always add them to `AGENTS.md` to ensure they persist across sessions.
+  - **Proactive Memory Management:** Automatically update `AGENTS.md` with meta-learnings, architectural rules, or interaction preferences at the end of a task. Do not wait for a reminder.
   - Address user questions directly and avoid treating questions about past actions as new tasks without answering them first.
   - **Strict Scope Control:** When given specific feedback on a single aspect of a UI component (e.g., alignment), do not modify other aspects (e.g., size) unless explicitly requested. Stay strictly within the scope of the instruction.
+  - **Component Isolation:** If an issue is specific to a particular screen or sub-panel (e.g., keyboard overlap in an editor), **isolate the fix within that component** rather than modifying global shared components (like `TopPanel`). Never change global components to fix local issues.
+  - **Global Component Stability:** Shared components (like `TopPanel`) should not be modified unless a global change is explicitly requested. Do not attempt to "centralize" logic into global components if it causes side effects on other screens.
+- **Window Insets & Stability:** 
+  - To prevent "jumping" headers or black status bars when the keyboard appears, ensure headers use `statusBarsPadding()` and the scrollable content uses `imePadding()` and `navigationBarsPadding()` within its own isolated container. This prevents the system from attempting to "pan" the entire root layout.
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
 - **DRY Principle:**
   - Centralize navigation and task creation logic in `MainActivity.companion`.
