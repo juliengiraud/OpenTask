@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 fun SettingsScreen(
     onSelectFolder: () -> Unit,
     onResetWatcher: () -> Unit,
+    onToggleWeekNumber: (Boolean) -> Unit,
     watchedFolder: String?,
     debugLogs: List<String>,
     modifier: Modifier = Modifier
@@ -55,7 +56,7 @@ fun SettingsScreen(
             Text(text = "Display week number", style = MaterialTheme.typography.bodyLarge)
             Switch(
                 checked = AppConfig.showWeekNumber,
-                onCheckedChange = { AppConfig.showWeekNumber = it }
+                onCheckedChange = onToggleWeekNumber
             )
         }
 

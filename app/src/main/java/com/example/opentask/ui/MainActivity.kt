@@ -130,7 +130,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        watchedFolder = getSavedWatchedFolder()
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        watchedFolder = prefs.getString("watched_folder", null)
+        AppConfig.showWeekNumber = prefs.getBoolean("show_week_number", true)
+
         handleIntent(intent)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -169,11 +172,6 @@ class MainActivity : ComponentActivity() {
     private fun saveWatchedFolder(uri: String?) {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         prefs.edit { putString("watched_folder", uri) }
-    }
-
-    private fun getSavedWatchedFolder(): String? {
-        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
-        return prefs.getString("watched_folder", null)
     }
 
     fun addDebugLog(message: String) {
@@ -314,6 +312,11 @@ fun OpenTaskApp(
                     AppTabs.SETTINGS -> SettingsScreen(
                         onSelectFolder = onSelectFolder,
                         onResetWatcher = onResetWatcher,
+                        onToggleWeekNumber = { 
+                            AppConfig.showWeekNumber = it
+                            val prefs = activity.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                            prefs.edit { putBoolean("show_week_number", it) }
+                        },
                         watchedFolder = watchedFolder,
                         debugLogs = debugLogs,
                         modifier = Modifier.fillMaxSize()
