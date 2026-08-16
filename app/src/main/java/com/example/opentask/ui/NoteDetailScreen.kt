@@ -1,6 +1,7 @@
 package com.example.opentask.ui
 
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +75,16 @@ fun NoteDetailScreen(
         onSave(toSave)
     }
 
+    val handleBackInternal = {
+        val currentContent = if (isParsedMode) textFieldValue.text else Task.fromRaw(task.filename, textFieldValue.text).textContent
+        if (titleValue.isBlank() && currentContent.isBlank()) {
+            onSave(currentTaskState.copy(title = "", textContent = "").toRaw())
+        }
+        onBack()
+    }
+
+    BackHandler(onBack = handleBackInternal)
+
     LaunchedEffect(isEditMode) {
         if (isEditMode) {
             if (!isParsedMode) {
@@ -126,7 +137,7 @@ fun NoteDetailScreen(
                         text = "←",
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier
-                            .clickable { onBack() }
+                            .clickable { handleBackInternal() }
                             .padding(end = 12.dp)
                     )
                     

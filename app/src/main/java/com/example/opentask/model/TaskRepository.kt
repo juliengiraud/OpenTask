@@ -15,12 +15,21 @@ object TaskRepository {
         val index = _tasks.indexOfFirst { it.id == taskId }
         if (index != -1) {
             val oldTask = _tasks[index]
-            // newContent is expected to be raw content
-            _tasks[index] = Task.fromRaw(oldTask.filename, newContent).copy(
+            val newTask = Task.fromRaw(oldTask.filename, newContent).copy(
                 id = oldTask.id,
                 lastUpdate = java.time.LocalDateTime.now()
             )
+            
+            if (newTask.title.isBlank() && newTask.textContent.isBlank()) {
+                _tasks.removeAt(index)
+            } else {
+                _tasks[index] = newTask
+            }
         }
+    }
+
+    fun deleteTask(taskId: String) {
+        _tasks.removeAll { it.id == taskId }
     }
 
     fun getTaskTitles(): List<String> = _tasks.map { it.title }
