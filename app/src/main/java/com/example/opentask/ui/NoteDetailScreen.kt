@@ -25,7 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.LaunchedEffect
@@ -147,28 +149,25 @@ fun NoteDetailScreen(
         val scrollState = rememberScrollState()
         val textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black)
         
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(16.dp)
-        ) {
-            Box {
-                BasicTextField(
-                    value = textFieldValue,
-                    onValueChange = { textFieldValue = it },
-                    readOnly = !isEditMode,
-                    textStyle = textStyle,
-                    onTextLayout = { textLayoutResult = it },
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().weight(1f)) {
+            val minHeight = maxHeight
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(16.dp)
+            ) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .focusRequester(focusRequester),
-                    decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier.drawBehind {
-                                textLayoutResult?.let { layout ->
-                                    val strokeWidth = 0.5.dp.toPx()
-                                    for (i in 0 until layout.lineCount) {
+                        .defaultMinSize(minHeight = minHeight - 32.dp)
+                        .drawBehind {
+                            textLayoutResult?.let { layout ->
+                                val strokeWidth = 0.5.dp.toPx()
+                                val lineCount = layout.lineCount
+                                if (lineCount > 0) {
+                                    // 1. Draw lines for all existing text lines
+                                    for (i in 0 until lineCount) {
                                         val y = layout.getLineBottom(i) - strokeWidth / 2
                                         drawLine(
                                             color = Color(0xFFF2F2F2),
@@ -177,32 +176,63 @@ fun NoteDetailScreen(
                                             strokeWidth = strokeWidth
                                         )
                                     }
+
+                                    // 2. Calculate average line height for the rest
+                                    val lineHeight = if (lineCount > 1) {
+                                        layout.getLineBottom(1) - layout.getLineBottom(0)
+                                    } else {
+                                        layout.getLineBottom(0)
+                                    }
+
+                                    // 3. Continue drawing lines until the end of the container
+                                    var currentY = layout.getLineBottom(lineCount - 1)
+                                    while (currentY + lineHeight <= size.height + strokeWidth) {
+                                        currentY += lineHeight
+                                        val drawY = currentY - strokeWidth / 2
+                                        drawLine(
+                                            color = Color(0xFFF2F2F2),
+                                            start = Offset(0f, drawY),
+                                            end = Offset(size.width, drawY),
+                                            strokeWidth = strokeWidth
+                                        )
+                                    }
                                 }
                             }
-                        ) {
+                        }
+                ) {
+                    BasicTextField(
+                        value = textFieldValue,
+                        onValueChange = { textFieldValue = it },
+                        readOnly = !isEditMode,
+                        textStyle = textStyle,
+                        onTextLayout = { textLayoutResult = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester),
+                        decorationBox = { innerTextField ->
                             innerTextField()
                         }
-                    }
-                )
-
-                if (!isEditMode) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onDoubleTap = { offset ->
-                                        textLayoutResult?.let { layout ->
-                                            val index = layout.getOffsetForPosition(offset)
-                                            textFieldValue = textFieldValue.copy(
-                                                selection = TextRange(index)
-                                            )
-                                        }
-                                        onEditModeChange(true)
-                                    }
-                                )
-                            }
                     )
+
+                    if (!isEditMode) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onDoubleTap = { offset ->
+                                            textLayoutResult?.let { layout ->
+                                                val index = layout.getOffsetForPosition(offset)
+                                                textFieldValue = textFieldValue.copy(
+                                                    selection = TextRange(index)
+                                                )
+                                            }
+                                            onEditModeChange(true)
+                                        }
+                                    )
+                                }
+                        )
+                    }
                 }
             }
         }
