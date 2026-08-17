@@ -101,10 +101,15 @@ class FolderWatcherManager(
                         newMetadata[name] = lastModified
 
                         if (name.endsWith(".md")) {
-                            val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                            loadTaskFromUri(fileUri, name, lastModified)?.let { task ->
-                                taskCache[name] = task
-                                loadedTasks.add(task)
+                            val cachedTask = taskCache[name]
+                            if (cachedTask != null && fileMetadataMap[name] == lastModified) {
+                                loadedTasks.add(cachedTask)
+                            } else {
+                                val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                                loadTaskFromUri(fileUri, name, lastModified)?.let { task ->
+                                    taskCache[name] = task
+                                    loadedTasks.add(task)
+                                }
                             }
                         }
 
