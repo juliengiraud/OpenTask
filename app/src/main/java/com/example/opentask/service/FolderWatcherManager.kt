@@ -25,6 +25,7 @@ class FolderWatcherManager(
         get() = fileMetadataMap.keys.toList()
 
     private var fileMetadataMap = mutableMapOf<String, Long>()
+    private var taskCache = mutableMapOf<String, Task>()
     private var folderContentObserver: ContentObserver? = null
     private val pollingHandler = Handler(Looper.getMainLooper())
     private var currentWatchedUri: Uri? = null
@@ -41,6 +42,7 @@ class FolderWatcherManager(
     fun setupWatcher(folderUriString: String?) {
         stop()
         currentWatchedUri = null
+        taskCache.clear()
 
         if (folderUriString == null) {
             lastEventInfo = "No folder selected"
@@ -100,7 +102,10 @@ class FolderWatcherManager(
 
                         if (name.endsWith(".md")) {
                             val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                            loadTaskFromUri(fileUri, name, lastModified)?.let { loadedTasks.add(it) }
+                            loadTaskFromUri(fileUri, name, lastModified)?.let { task ->
+                                taskCache[name] = task
+                                loadedTasks.add(task)
+                            }
                         }
 
                         if (!fileMetadataMap.containsKey(name)) {
@@ -123,6 +128,7 @@ class FolderWatcherManager(
             // Detect Deletions
             for (oldName in fileMetadataMap.keys) {
                 if (!newMetadata.containsKey(oldName)) {
+                    taskCache.remove(oldName)
                     if (showPush) {
                         lastEventInfo = "Deleted: $oldName"
                         debugManager.log("FolderWatcherManager", lastEventInfo)
@@ -168,6 +174,7 @@ class FolderWatcherManager(
         debugManager.log("FolderWatcherManager", "Watcher reset.")
         setupWatcher(null)
         fileMetadataMap.clear()
+        taskCache.clear()
         lastEventInfo = "Watcher reset"
         onStatusChanged()
     }
