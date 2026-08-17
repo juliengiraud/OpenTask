@@ -29,6 +29,7 @@ class FolderWatcherManager(
     private var folderContentObserver: ContentObserver? = null
     private val pollingHandler = Handler(Looper.getMainLooper())
     private var currentWatchedUri: Uri? = null
+    private var currentChildrenUri: Uri? = null
 
     private val pollRunnable = object : Runnable {
         override fun run() {
@@ -53,6 +54,9 @@ class FolderWatcherManager(
         try {
             val uri = folderUriString.toUri()
             currentWatchedUri = uri
+            val documentId = DocumentsContract.getTreeDocumentId(uri)
+            currentChildrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, documentId)
+            
             debugManager.log("FolderWatcherManager", "Monitoring: $uri")
 
             val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -72,17 +76,9 @@ class FolderWatcherManager(
     }
 
     private fun scanFolder(treeUri: Uri, showPush: Boolean) {
+        val childrenUri = currentChildrenUri ?: return
         try {
-            val documentId = DocumentsContract.getTreeDocumentId(treeUri)
-            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
-
-            val projection = arrayOf(
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                DocumentsContract.Document.COLUMN_LAST_MODIFIED,
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID
-            )
-
-            val cursor = context.contentResolver.query(childrenUri, projection, null, null, null)
+            val cursor = context.contentResolver.query(childrenUri, PROJECTION, null, null, null)
             val newMetadata = mutableMapOf<String, Long>()
             var changeDetected = false
             val loadedTasks = mutableListOf<Task>()
@@ -188,5 +184,14 @@ class FolderWatcherManager(
         pollingHandler.removeCallbacks(pollRunnable)
         folderContentObserver?.let { context.contentResolver.unregisterContentObserver(it) }
         folderContentObserver = null
+        currentChildrenUri = null
+    }
+
+    companion object {
+        private val PROJECTION = arrayOf(
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID
+        )
     }
 }
