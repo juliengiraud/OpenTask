@@ -26,6 +26,8 @@
   - **Proactive Memory Management:** Automatically update `AGENTS.md` with meta-learnings, architectural rules, or interaction preferences at the end of a task. Do not wait for a reminder.
   - Address user questions directly and avoid treating questions about past actions as new tasks without answering them first.
   - **Strict Scope Control:** When given specific feedback on a single aspect of a UI component (e.g., alignment), do not modify other aspects (e.g., size) unless explicitly requested. Stay strictly within the scope of the instruction.
+  - **Question vs Task Distinction (STRICT):** Never treat a question about how a feature works as a request to implement or change it. Always answer the question first. 
+  - **MANDATORY TEXT-ONLY RESPONSE:** If the user's message is an inquiry (ends in a question mark or asks "how", "why", "where"), you are **PROHIBITED** from using `write_file`, `replace_file_content`, or `multi_replace_file_content` in that same turn. You must provide a text-only explanation first. Only proceed with implementation in a *subsequent* turn if the user explicitly instructs it (e.g., "Implement this", "Fix this").
   - **Component Isolation:** If an issue is specific to a particular screen or sub-panel (e.g., keyboard overlap in an editor), **isolate the fix within that component** rather than modifying global shared components (like `TopPanel`). Never change global components to fix local issues.
   - **Global Component Stability:** Shared components (like `TopPanel`) should not be modified unless a global change is explicitly requested. Do not attempt to "centralize" logic into global components if it causes side effects on other screens.
 - **Window Insets & Stability:** 
@@ -37,6 +39,11 @@
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
 - **Model-Driven Parsing:** Move all data-specific parsing and reconstruction logic (like Obsidian file handling) into the relevant model classes (e.g., `Task`). The UI should remain agnostic to the storage format and only handle presentation states (like toggling between parsed/raw views).
   - **Deterministic Identifiers:** For file-synced models, use the unique filename as the `id`. This prevents background scans or saves from breaking UI state by generating new random UUIDs for the same file.
+  - **Conflict Resolution Policy:**
+    - If a conflict occurs during editing (file changed on disk while user has unsaved changes), the **YAML frontmatter from the filesystem always wins** (overwrites local changes).
+    - Body content and Titles are merged using a smart strategy:
+      - If both sides changed the same part, conflict markers are used (`<<<<<<< External ...`).
+      - If only one side changed, the changes are auto-merged without markers.
   - **Obsidian File Structure:**
     - Raw format: YAML frontmatter -> 1 empty line -> `# Title` -> 1 empty line -> Inner Content -> at least 1 empty line at the bottom.
     - `Task.fromRaw` extracts the creation date strictly from the filename (`yyyy-MM-dd_HH-mm-ss.md`).

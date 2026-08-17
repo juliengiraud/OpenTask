@@ -230,6 +230,18 @@ fun OpenTaskApp(
         }
     }
 
+    // Sync selected task with repository updates (external changes)
+    val tasks = TaskRepository.tasks
+    LaunchedEffect(tasks.toList()) {
+        activity.selectedTask?.let { current ->
+            val updated = tasks.find { it.id == current.id }
+            if (updated != null && updated !== current) {
+                // Only update if it's a different instance (likely from a repository reload)
+                activity.selectedTask = updated
+            }
+        }
+    }
+
     if (activity.selectedTask != null) {
         val handleBack = {
             if (activity.isEditMode) {
