@@ -5,8 +5,8 @@ import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.DocumentsContract
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
 import java.time.Instant
@@ -71,33 +71,51 @@ class FolderWatcherManager(
 
     private fun scanFolder(treeUri: Uri, showPush: Boolean) {
         try {
-            val folder = DocumentFile.fromTreeUri(context, treeUri)
-            val currentFiles = folder?.listFiles() ?: emptyArray()
+            val documentId = DocumentsContract.getTreeDocumentId(treeUri)
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
 
+            val projection = arrayOf(
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID
+            )
+
+            val cursor = context.contentResolver.query(childrenUri, projection, null, null, null)
             val newMetadata = mutableMapOf<String, Long>()
             var changeDetected = false
             val loadedTasks = mutableListOf<Task>()
 
-            for (file in currentFiles) {
-                if (file.name?.endsWith(".md") == true) {
-                    loadTaskFromFile(file)?.let { loadedTasks.add(it) }
-                }
+            cursor?.use { c ->
+                val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val lastModIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                val idIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
 
-                val name = file.name ?: "Unknown"
-                val lastModified = file.lastModified()
-                newMetadata[name] = lastModified
+                if (nameIndex != -1 && lastModIndex != -1 && idIndex != -1) {
+                    while (c.moveToNext()) {
+                        val name = c.getString(nameIndex) ?: continue
+                        val lastModified = c.getLong(lastModIndex)
+                        val docId = c.getString(idIndex)
+                        
+                        newMetadata[name] = lastModified
 
-                if (!fileMetadataMap.containsKey(name)) {
-                    if (showPush && fileMetadataMap.isNotEmpty()) {
-                        lastEventInfo = "Created: $name"
-                        debugManager.log("FolderWatcherManager", lastEventInfo)
-                        changeDetected = true
-                    }
-                } else if (fileMetadataMap[name]!! < lastModified) {
-                    if (showPush) {
-                        lastEventInfo = "Updated: $name"
-                        debugManager.log("FolderWatcherManager", lastEventInfo)
-                        changeDetected = true
+                        if (name.endsWith(".md")) {
+                            val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                            loadTaskFromUri(fileUri, name, lastModified)?.let { loadedTasks.add(it) }
+                        }
+
+                        if (!fileMetadataMap.containsKey(name)) {
+                            if (showPush && fileMetadataMap.isNotEmpty()) {
+                                lastEventInfo = "Created: $name"
+                                debugManager.log("FolderWatcherManager", lastEventInfo)
+                                changeDetected = true
+                            }
+                        } else if (fileMetadataMap[name]!! < lastModified) {
+                            if (showPush) {
+                                lastEventInfo = "Updated: $name"
+                                debugManager.log("FolderWatcherManager", lastEventInfo)
+                                changeDetected = true
+                            }
+                        }
                     }
                 }
             }
@@ -128,20 +146,20 @@ class FolderWatcherManager(
         }
     }
 
-    private fun loadTaskFromFile(file: DocumentFile): Task? {
+    private fun loadTaskFromUri(uri: Uri, name: String, lastModified: Long): Task? {
         return try {
-            val content = context.contentResolver.openInputStream(file.uri)?.use { inputStream ->
+            val content = context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 inputStream.bufferedReader().readText()
             } ?: return null
 
-            Task.fromRaw(file.name ?: "Unknown", content).copy(
+            Task.fromRaw(name, content).copy(
                 lastUpdate = LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(file.lastModified()),
+                    Instant.ofEpochMilli(lastModified),
                     ZoneId.systemDefault()
                 )
             )
         } catch (e: Exception) {
-            debugManager.log("FolderWatcherManager", "Error reading ${file.name}: ${e.message}")
+            debugManager.log("FolderWatcherManager", "Error reading $name: ${e.message}")
             null
         }
     }
