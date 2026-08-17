@@ -9,6 +9,9 @@ object TaskRepository {
     private val _tasks = mutableStateListOf<Task>()
     val tasks: List<Task> get() = _tasks
 
+    var onTaskSaved: ((String, Long, Task) -> Unit)? = null
+    var onTaskDeleted: ((String) -> Unit)? = null
+
     fun setTasks(newTasks: List<Task>) {
         _tasks.clear()
         _tasks.addAll(newTasks)
@@ -59,10 +62,11 @@ object TaskRepository {
             file = rootFolder.createFile("text/markdown", task.filename)
         }
         
-        file?.let {
-            context.contentResolver.openOutputStream(it.uri, "wt")?.use { output ->
+        file?.let { f ->
+            context.contentResolver.openOutputStream(f.uri, "wt")?.use { output ->
                 output.write(task.toRaw().toByteArray())
             }
+            onTaskSaved?.invoke(task.filename, f.lastModified(), task)
         }
     }
 
@@ -73,6 +77,7 @@ object TaskRepository {
         val rootFolder = DocumentFile.fromTreeUri(context, folderUri) ?: return
         
         rootFolder.findFile(filename)?.delete()
+        onTaskDeleted?.invoke(filename)
     }
 
     fun getTaskTitles(): List<String> = _tasks.map { it.title }

@@ -171,6 +171,16 @@ class FolderWatcherManager(
         }
     }
 
+    fun updateCache(name: String, lastModified: Long, task: Task) {
+        fileMetadataMap[name] = lastModified
+        taskCache[name] = task
+    }
+
+    fun removeFromCache(name: String) {
+        fileMetadataMap.remove(name)
+        taskCache.remove(name)
+    }
+
     fun reset() {
         debugManager.log("FolderWatcherManager", "Watcher reset.")
         setupWatcher(null)

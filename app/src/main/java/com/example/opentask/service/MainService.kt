@@ -19,6 +19,13 @@ class MainService : Service() {
         notificationManager = AppNotificationManager(this)
         folderWatcherManager = FolderWatcherManager(this, debugManager) { updateNotification() }
         
+        TaskRepository.onTaskSaved = { name, lastModified, task ->
+            folderWatcherManager.updateCache(name, lastModified, task)
+        }
+        TaskRepository.onTaskDeleted = { name ->
+            folderWatcherManager.removeFromCache(name)
+        }
+
         debugManager.log("MainService", "Service Created")
     }
 
@@ -51,6 +58,8 @@ class MainService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         folderWatcherManager.stop()
+        TaskRepository.onTaskSaved = null
+        TaskRepository.onTaskDeleted = null
     }
 
     private fun updateNotification() {
