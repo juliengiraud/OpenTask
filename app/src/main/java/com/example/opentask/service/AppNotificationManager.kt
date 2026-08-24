@@ -48,8 +48,8 @@ class AppNotificationManager(private val context: Context) {
         )
 
         val taskCount = taskNames.size
-        val joinedNames = taskNames.joinToString(" / ")
-        val titleText = "[$taskCount] $joinedNames"
+        val joinedNames = if (taskNames.isEmpty()) "Pas de tâches pour aujourd'hui" else taskNames.joinToString(" / ")
+        val titleText = if (taskNames.isEmpty()) joinedNames else "[$taskCount] $joinedNames"
         
         val spannableTitle = SpannableString(titleText).apply {
             // Standard title is ~16sp, aiming for ~14sp (roughly 2sp/dp smaller)

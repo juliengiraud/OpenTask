@@ -48,7 +48,7 @@ class MainService : Service() {
                 
                 startForeground(
                     notificationManager.getForegroundId(),
-                    notificationManager.getForegroundNotification(TaskRepository.getTaskTitles()),
+                    notificationManager.getForegroundNotification(TaskRepository.getTodaysTaskTitles()),
                 )
             }
         }
@@ -63,7 +63,7 @@ class MainService : Service() {
     }
 
     private fun updateNotification() {
-        notificationManager.updateForegroundNotification(TaskRepository.getTaskTitles())
+        notificationManager.updateForegroundNotification(TaskRepository.getTodaysTaskTitles())
     }
 
     companion object {

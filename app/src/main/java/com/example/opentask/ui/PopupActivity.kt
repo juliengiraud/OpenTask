@@ -80,8 +80,10 @@ class PopupActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        val todaysTasks = TaskRepository.getTodaysTasks()
+
                         NotesList(
-                            tasks = TaskRepository.tasks,
+                            tasks = todaysTasks,
                             modifier = Modifier
                                 .weight(1f, fill = false) // Adaptive height
                                 .padding(horizontal = 16.dp)

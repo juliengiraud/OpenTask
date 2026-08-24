@@ -8,13 +8,39 @@ import androidx.documentfile.provider.DocumentFile
 object TaskRepository {
     private val _tasks = mutableStateListOf<Task>()
     val tasks: List<Task> get() = _tasks
+    
+    // Index for fast lookup by date (due_date if set, otherwise creation_date)
+    private val _tasksByDate = mutableMapOf<java.time.LocalDate, MutableList<Task>>()
 
     var onTaskSaved: ((String, Long, Task) -> Unit)? = null
     var onTaskDeleted: ((String) -> Unit)? = null
 
+    private fun rebuildIndex() {
+        _tasksByDate.clear()
+        _tasks.forEach { addToIndex(it) }
+    }
+
+    private fun addToIndex(task: Task) {
+        task.dueDate?.let {
+            val date = it.toLocalDate()
+            _tasksByDate.getOrPut(date) { mutableListOf() }.add(task)
+        }
+    }
+
+    private fun removeFromIndex(task: Task) {
+        task.dueDate?.let {
+            val date = it.toLocalDate()
+            _tasksByDate[date]?.removeIf { it.id == task.id }
+            if (_tasksByDate[date]?.isEmpty() == true) {
+                _tasksByDate.remove(date)
+            }
+        }
+    }
+
     fun setTasks(newTasks: List<Task>) {
         _tasks.clear()
         _tasks.addAll(newTasks)
+        rebuildIndex()
     }
 
     fun updateTask(context: Context, taskId: String, newRawContent: String) {
@@ -39,6 +65,7 @@ object TaskRepository {
                 if (context is com.example.opentask.ui.MainActivity) {
                     context.addDebugLog("Memory: Deleting empty task ${oldTask.filename}")
                 }
+                removeFromIndex(oldTask)
                 _tasks.removeAt(index)
                 deleteTaskFile(context, oldTask.filename)
             } else {
@@ -48,7 +75,9 @@ object TaskRepository {
                 if (context is com.example.opentask.ui.MainActivity) {
                     context.addDebugLog("Memory: Updating task ${newTask.filename}")
                 }
+                removeFromIndex(oldTask)
                 _tasks[index] = newTask
+                addToIndex(newTask)
                 saveTaskToFile(context, newTask)
             }
         } else if (!isEmpty) {
@@ -57,6 +86,7 @@ object TaskRepository {
                 context.addDebugLog("Memory: Creating new task ${newTask.filename}")
             }
             _tasks.add(0, newTask)
+            addToIndex(newTask)
             saveTaskToFile(context, newTask)
         }
     }
@@ -65,6 +95,7 @@ object TaskRepository {
         val index = _tasks.indexOfFirst { it.id == taskId }
         if (index != -1) {
             val task = _tasks[index]
+            removeFromIndex(task)
             _tasks.removeAt(index)
             deleteTaskFile(context, task.filename)
         }
@@ -108,6 +139,23 @@ object TaskRepository {
     }
 
     fun getTaskTitles(): List<String> = _tasks.map { it.title }
+
+    fun getTodaysTaskTitles(): List<String> {
+        val today = java.time.LocalDate.now()
+        // Use the index for fast lookup.
+        // If a task has no due_date, it is indexed by its creation date.
+        return _tasksByDate[today]
+            ?.filter { !it.isDone && it.title.isNotBlank() }
+            ?.map { it.title }
+            ?: emptyList()
+    }
+
+    fun getTodaysTasks(): List<Task> {
+        val today = java.time.LocalDate.now()
+        return _tasksByDate[today]
+            ?.filter { !it.isDone }
+            ?: emptyList()
+    }
 
     fun createEmptyTask(dueDate: java.time.LocalDateTime? = null): Task {
         val now = java.time.LocalDateTime.now()
