@@ -142,3 +142,6 @@ This project should replace the usage of ColorNote
   - [ ] reset button switch back to default vault
 - [ ] clean project structure
 - [x] display week number
+- [/] handeling data conflicts
+  - list trivial and non-trivial usecases
+  - handle them one by one for title, yaml and content

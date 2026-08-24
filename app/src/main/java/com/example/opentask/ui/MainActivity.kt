@@ -225,6 +225,7 @@ fun OpenTaskApp(
 
     LaunchedEffect(pagerState.currentPage) {
         if (!isBackNavigating && pagerState.currentPage != lastKnownPage) {
+            navigationStack.remove(lastKnownPage)
             navigationStack.add(lastKnownPage)
             lastKnownPage = pagerState.currentPage
         }
