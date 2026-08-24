@@ -58,6 +58,7 @@
 - **Navigation Flow:**
   - When opening a task for editing from an external source (like a popup), use `exitOnBack = true` to ensure the user returns to the previous context when they finish or go back.
   - **Unique Page Stack:** For tab or pager-based navigation, the back stack should only contain unique pages. When pushing a page to the stack, if it already exists, remove the oldest occurrence to prevent an infinite stack and ensure the back button cycles through distinct recent locations.
+- **Activity Lifecycle & Navigation:** `MainActivity` uses `standard` launch mode (not `singleTop`) to allow transient editor instances to exist on top of `PopupActivity` without finishing the main application's instance. Use `exitOnBack = true` for these transient instances.
 - **Layout Structure:**
   - `MainActivity` uses a standard `Scaffold`. The `MainBottomBar` goes into the `bottomBar` slot, and `AddNoteButton` goes into the `floatingActionButton` slot. This ensures the list content is correctly padded.
 

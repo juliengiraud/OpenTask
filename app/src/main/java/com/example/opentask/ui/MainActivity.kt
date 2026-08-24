@@ -45,20 +45,26 @@ class MainActivity : ComponentActivity() {
         private const val EXTRA_IS_EDIT_MODE = "IS_EDIT_MODE"
         private const val EXTRA_EXIT_ON_BACK = "EXIT_ON_BACK"
         private const val EXTRA_CREATE_NEW = "CREATE_NEW"
+        private const val EXTRA_DUE_DATE = "DUE_DATE"
 
         fun createIntent(
             context: Context,
             taskId: String? = null,
             isEditMode: Boolean = false,
             exitOnBack: Boolean = false,
-            createNew: Boolean = false
+            createNew: Boolean = false,
+            dueDate: java.time.LocalDateTime? = null
         ): Intent {
             return Intent(context, MainActivity::class.java).apply {
                 if (taskId != null) putExtra(EXTRA_TASK_ID, taskId)
                 putExtra(EXTRA_IS_EDIT_MODE, isEditMode)
                 putExtra(EXTRA_EXIT_ON_BACK, exitOnBack)
                 putExtra(EXTRA_CREATE_NEW, createNew)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                if (dueDate != null) putExtra(EXTRA_DUE_DATE, dueDate.toString())
+                
+                if (context !is android.app.Activity) {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
             }
         }
 
@@ -82,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 val newTask = TaskRepository.createEmptyTask(dueDate)
                 openTask(context, newTask, isEditMode = true, exitOnBack = exitOnBack)
             } else {
-                context.startActivity(createIntent(context, isEditMode = true, exitOnBack = exitOnBack, createNew = true))
+                context.startActivity(createIntent(context, isEditMode = true, exitOnBack = exitOnBack, createNew = true, dueDate = dueDate))
             }
         }
     }
@@ -190,7 +196,9 @@ class MainActivity : ComponentActivity() {
         isEditMode = intent?.getBooleanExtra(EXTRA_IS_EDIT_MODE, false) ?: false
         
         if (createNew) {
-            selectedTask = TaskRepository.createEmptyTask()
+            val dueDateStr = intent?.getStringExtra(EXTRA_DUE_DATE)
+            val dueDate = dueDateStr?.let { java.time.LocalDateTime.parse(it) }
+            selectedTask = TaskRepository.createEmptyTask(dueDate)
         } else if (taskId != null) {
             selectedTask = TaskRepository.tasks.find { it.id == taskId }
         }
@@ -329,6 +337,12 @@ fun OpenTaskApp(
                         modifier = Modifier.fillMaxSize()
                     )
                     AppTabs.CALENDAR -> CalendarScreen(
+                        onDateClick = { date ->
+                            val intent = Intent(activity, PopupActivity::class.java).apply {
+                                putExtra(PopupActivity.EXTRA_DATE, date.toString())
+                            }
+                            activity.startActivity(intent)
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
                     AppTabs.SETTINGS -> SettingsScreen(

@@ -45,6 +45,7 @@ import java.util.Locale
 
 @Composable
 fun CalendarScreen(
+    onDateClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
@@ -206,7 +207,7 @@ fun CalendarScreen(
                                     .weight(if (showWeekNumber) 2f else 1f)
                                     .fillMaxHeight()
                                     .background(if (isInMonth) Color.White else AppConfig.CalendarOutOfMonthColor)
-                                    .clickable(enabled = isInMonth) { /* Ripple effect only */ },
+                                    .clickable(enabled = isInMonth) { onDateClick(targetDate) },
                                 contentAlignment = Alignment.TopStart
                             ) {
                                 val textColor = if (isInMonth) {

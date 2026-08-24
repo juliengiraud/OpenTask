@@ -2,6 +2,8 @@ package com.example.opentask.model
 
 import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 
@@ -10,7 +12,7 @@ object TaskRepository {
     val tasks: List<Task> get() = _tasks
     
     // Index for fast lookup by date (due_date if set, otherwise creation_date)
-    private val _tasksByDate = mutableMapOf<java.time.LocalDate, MutableList<Task>>()
+    private val _tasksByDate = mutableStateMapOf<java.time.LocalDate, SnapshotStateList<Task>>()
 
     var onTaskSaved: ((String, Long, Task) -> Unit)? = null
     var onTaskDeleted: ((String) -> Unit)? = null
@@ -23,7 +25,7 @@ object TaskRepository {
     private fun addToIndex(task: Task) {
         task.dueDate?.let {
             val date = it.toLocalDate()
-            _tasksByDate.getOrPut(date) { mutableListOf() }.add(task)
+            _tasksByDate.getOrPut(date) { mutableStateListOf() }.add(task)
         }
     }
 
@@ -151,8 +153,11 @@ object TaskRepository {
     }
 
     fun getTodaysTasks(): List<Task> {
-        val today = java.time.LocalDate.now()
-        return _tasksByDate[today]
+        return getTasksForDate(java.time.LocalDate.now())
+    }
+
+    fun getTasksForDate(date: java.time.LocalDate): List<Task> {
+        return _tasksByDate[date]
             ?.filter { !it.isDone }
             ?: emptyList()
     }

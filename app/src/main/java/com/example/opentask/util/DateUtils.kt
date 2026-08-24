@@ -10,12 +10,19 @@ object DateUtils {
      * Example: "Wed. 17 July"
      */
     fun getTodayFormattedDate(): String {
-        val today = LocalDate.now()
+        return formatDate(LocalDate.now())
+    }
+
+    /**
+     * Returns the date in the format: {3 first letters of the day}. {number of day in month} {name of the month}
+     * Example: "Wed. 17 July"
+     */
+    fun formatDate(date: LocalDate): String {
         val locale = Locale.getDefault()
-        val dayName = today.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
+        val dayName = date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
         val dayAbbr = dayName.take(3)
-        val monthName = today.month.getDisplayName(TextStyle.FULL, locale)
-        return "$dayAbbr. ${today.dayOfMonth} $monthName"
+        val monthName = date.month.getDisplayName(TextStyle.FULL, locale)
+        return "$dayAbbr. ${date.dayOfMonth} $monthName"
     }
 
     /**

@@ -21,6 +21,9 @@ class MainService : Service() {
         
         TaskRepository.onTaskSaved = { name, lastModified, task ->
             folderWatcherManager.updateCache(name, lastModified, task)
+            if (task.dueDate?.toLocalDate() == java.time.LocalDate.now()) {
+                updateNotification()
+            }
         }
         TaskRepository.onTaskDeleted = { name ->
             folderWatcherManager.removeFromCache(name)
@@ -31,9 +34,6 @@ class MainService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_INCREMENT -> {
-                debugManager.log("MainService", "ACTION_INCREMENT no longer supported with file watcher")
-            }
             ACTION_UPDATE_WATCHED_FOLDER -> {
                 val folderUri = intent.getStringExtra(EXTRA_FOLDER_URI)
                 folderWatcherManager.setupWatcher(folderUri)
@@ -67,7 +67,6 @@ class MainService : Service() {
     }
 
     companion object {
-        const val ACTION_INCREMENT = "com.example.opentask.service.MainService.ACTION_INCREMENT"
         const val ACTION_UPDATE_WATCHED_FOLDER = "com.example.opentask.service.MainService.ACTION_UPDATE_WATCHED_FOLDER"
         const val ACTION_RESET_WATCHER = "com.example.opentask.service.MainService.ACTION_RESET_WATCHER"
         const val EXTRA_FOLDER_URI = "com.example.opentask.service.MainService.EXTRA_FOLDER_URI"

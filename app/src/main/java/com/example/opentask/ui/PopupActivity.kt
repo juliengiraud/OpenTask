@@ -20,6 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,23 +35,30 @@ import com.example.opentask.model.TaskRepository
 import com.example.opentask.service.MainService
 import com.example.opentask.ui.theme.OpenTaskTheme
 import com.example.opentask.util.DateUtils
+import java.time.LocalDate
 
 class PopupActivity : ComponentActivity() {
+    private var currentDate by mutableStateOf(java.time.LocalDate.now())
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Increment task count via service
-        val incrementIntent = Intent(this, MainService::class.java).apply {
-            action = MainService.ACTION_INCREMENT
-        }
-        startService(incrementIntent)
-
-        val formattedDate = DateUtils.getTodayFormattedDate()
+        handleIntent(intent)
 
         setContent {
             OpenTaskTheme {
                 val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+                val date = currentDate
+                val formattedDate = DateUtils.formatDate(date)
+                
+                // Use derivedStateOf to react to TaskRepository index changes automatically
+                val todaysTasks by remember(date) {
+                    derivedStateOf {
+                        TaskRepository.getTasksForDate(date)
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -80,8 +92,6 @@ class PopupActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        val todaysTasks = TaskRepository.getTodaysTasks()
-
                         NotesList(
                             tasks = todaysTasks,
                             modifier = Modifier
@@ -97,7 +107,7 @@ class PopupActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .background(AppConfig.SubPanelBackgroundColor)
                                 .clickable {
-                                    MainActivity.createNewTask(this@PopupActivity, exitOnBack = true)
+                                    MainActivity.createNewTask(this@PopupActivity, exitOnBack = true, dueDate = date.atStartOfDay())
                                 }
                                 .padding(16.dp),
                             contentAlignment = Alignment.Center
@@ -112,5 +122,19 @@ class PopupActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        val dateExtra = intent.getStringExtra(EXTRA_DATE)
+        currentDate = if (dateExtra != null) LocalDate.parse(dateExtra) else LocalDate.now()
+    }
+
+    companion object {
+        const val EXTRA_DATE = "extra_date"
     }
 }

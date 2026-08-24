@@ -19,7 +19,6 @@
             android:name=".ui.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:launchMode="singleTop"
             android:theme="@style/Theme.OpenTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -40,7 +39,7 @@
         <activity
             android:name=".ui.PopupActivity"
             android:theme="@style/Theme.Transparent"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTop"
             android:exported="false" />
     </application>
 
