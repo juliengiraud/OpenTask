@@ -17,7 +17,12 @@ class MainService : Service() {
         super.onCreate()
         debugManager = DebugManager(this)
         notificationManager = AppNotificationManager(this)
-        folderWatcherManager = FolderWatcherManager(this, debugManager) { updateNotification() }
+        folderWatcherManager = FolderWatcherManager(this, debugManager) { changedTasks ->
+            val today = java.time.LocalDate.now()
+            if (changedTasks.isEmpty() || changedTasks.any { it.dueDate?.toLocalDate() == today }) {
+                updateNotification()
+            }
+        }
         
         TaskRepository.onTaskSaved = { name, lastModified, task ->
             folderWatcherManager.updateCache(name, lastModified, task)
@@ -25,8 +30,11 @@ class MainService : Service() {
                 updateNotification()
             }
         }
-        TaskRepository.onTaskDeleted = { name ->
+        TaskRepository.onTaskDeleted = { name, task ->
             folderWatcherManager.removeFromCache(name)
+            if (task.dueDate?.toLocalDate() == java.time.LocalDate.now()) {
+                updateNotification()
+            }
         }
 
         debugManager.log("MainService", "Service Created")

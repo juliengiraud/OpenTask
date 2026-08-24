@@ -15,7 +15,7 @@ object TaskRepository {
     private val _tasksByDate = mutableStateMapOf<java.time.LocalDate, SnapshotStateList<Task>>()
 
     var onTaskSaved: ((String, Long, Task) -> Unit)? = null
-    var onTaskDeleted: ((String) -> Unit)? = null
+    var onTaskDeleted: ((String, Task) -> Unit)? = null
 
     private fun rebuildIndex() {
         _tasksByDate.clear()
@@ -70,6 +70,7 @@ object TaskRepository {
                 removeFromIndex(oldTask)
                 _tasks.removeAt(index)
                 deleteTaskFile(context, oldTask.filename)
+                onTaskDeleted?.invoke(oldTask.filename, oldTask)
             } else {
                 // Optimization: Don't save if content hasn't changed (including YAML properties)
                 if (oldTask.toRaw() == newRawContent) return
@@ -100,6 +101,7 @@ object TaskRepository {
             removeFromIndex(task)
             _tasks.removeAt(index)
             deleteTaskFile(context, task.filename)
+            onTaskDeleted?.invoke(task.filename, task)
         }
     }
 
@@ -137,7 +139,6 @@ object TaskRepository {
         if (context is com.example.opentask.ui.MainActivity) {
             context.addDebugLog("File: Deleted $filename")
         }
-        onTaskDeleted?.invoke(filename)
     }
 
     fun getTaskTitles(): List<String> = _tasks.map { it.title }

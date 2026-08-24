@@ -16,7 +16,7 @@ import java.time.ZoneId
 class FolderWatcherManager(
     private val context: Context,
     private val debugManager: DebugManager,
-    private val onStatusChanged: () -> Unit,
+    private val onStatusChanged: (List<Task>) -> Unit,
 ) {
     var lastEventInfo: String = "No changes yet"
         private set
@@ -47,7 +47,7 @@ class FolderWatcherManager(
 
         if (folderUriString == null) {
             lastEventInfo = "No folder selected"
-            onStatusChanged()
+            onStatusChanged(emptyList())
             return
         }
 
@@ -82,6 +82,7 @@ class FolderWatcherManager(
             val newMetadata = mutableMapOf<String, Long>()
             var changeDetected = false
             val loadedTasks = mutableListOf<Task>()
+            val changedTasks = mutableListOf<Task>()
 
             cursor?.use { c ->
                 val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
@@ -105,6 +106,7 @@ class FolderWatcherManager(
                                 loadTaskFromUri(fileUri, name, lastModified)?.let { task ->
                                     taskCache[name] = task
                                     loadedTasks.add(task)
+                                    changedTasks.add(task)
                                 }
                             }
                         }
@@ -115,16 +117,9 @@ class FolderWatcherManager(
                                 debugManager.log("FolderWatcherManager", lastEventInfo)
                                 changeDetected = true
                             }
-                        } else if (fileMetadataMap[name]!! < lastModified) {
+                        } else if (fileMetadataMap[name]!! != lastModified) {
                             if (showPush) {
-                                lastEventInfo = "Updated: $name"
-                                debugManager.log("FolderWatcherManager", lastEventInfo)
-                                changeDetected = true
-                            }
-                        } else if (fileMetadataMap[name]!! > lastModified) {
-                            // This can happen if file system clock is slightly different or file was replaced with an older version
-                            if (showPush) {
-                                lastEventInfo = "Externally Replaced: $name"
+                                lastEventInfo = if (fileMetadataMap[name]!! < lastModified) "Updated: $name" else "Externally Replaced: $name"
                                 debugManager.log("FolderWatcherManager", lastEventInfo)
                                 changeDetected = true
                             }
@@ -136,6 +131,8 @@ class FolderWatcherManager(
             // Detect Deletions
             for (oldName in fileMetadataMap.keys) {
                 if (!newMetadata.containsKey(oldName)) {
+                    val removedTask = taskCache[oldName]
+                    if (removedTask != null) changedTasks.add(removedTask)
                     taskCache.remove(oldName)
                     if (showPush) {
                         lastEventInfo = "Deleted: $oldName"
@@ -152,7 +149,7 @@ class FolderWatcherManager(
                 fileMetadataMap.clear()
                 fileMetadataMap.putAll(newMetadata)
                 TaskRepository.setTasks(loadedTasks)
-                onStatusChanged()
+                onStatusChanged(if (fileMetadataMap.size == newMetadata.size && !changeDetected) loadedTasks else changedTasks)
             }
 
         } catch (e: Exception) {
@@ -195,7 +192,7 @@ class FolderWatcherManager(
         fileMetadataMap.clear()
         taskCache.clear()
         lastEventInfo = "Watcher reset"
-        onStatusChanged()
+        onStatusChanged(emptyList())
     }
 
     fun stop() {
