@@ -107,7 +107,7 @@ data class Task(
                 actualBodyStart++
             }
 
-            val body = lines.drop(actualBodyStart).joinToString("\n")
+            val body = lines.drop(actualBodyStart).joinToString("\n").trimEnd()
 
             return Task(
                 id = filename,
@@ -138,9 +138,9 @@ data class Task(
         if (isDone) sb.append("done: true\n")
         dueDate?.let {
             if (hasTime) {
-                sb.append("due: ").append(it.toString()).append("\n")
+                sb.append("due_date: ").append(it.toString()).append("\n")
             } else {
-                sb.append("due: ").append(it.toLocalDate().toString()).append("\n")
+                sb.append("due_date: ").append(it.toLocalDate().toString()).append("\n")
             }
         }
         if (hasTime) sb.append("hastime: true\n")
@@ -159,7 +159,7 @@ data class Task(
 
             propertyLines.forEach { line ->
                 val key = line.split(":", limit = 2).firstOrNull()?.trim()?.lowercase()
-                if (key != null && key.isNotEmpty() && key !in listOf("creation_date", "last_update", "done", "completed", "due", "deadline", "hastime")) {
+                if (key != null && key.isNotEmpty() && key !in listOf("creation_date", "last_update", "done", "completed", "due", "deadline", "hastime", "due_date")) {
                     sb.append(line).append("\n")
                 }
             }
@@ -168,8 +168,8 @@ data class Task(
 
         // Always include title row, even if empty, with 1 empty line below
         sb.append("# ").append(title).append("\n\n")
-        // Ensure the content ends with at least one empty line
-        sb.append(textContent.trimEnd()).append("\n\n")
+        // Ensure the content ends with exactly one empty line
+        sb.append(textContent.trimEnd()).append("\n")
         return sb.toString()
     }
 }

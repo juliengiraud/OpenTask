@@ -22,9 +22,13 @@ object TaskRepository {
         
         // Use taskId as filename for new tasks (since createEmptyTask uses it)
         val filename = if (index != -1) _tasks[index].filename else taskId
+        
+        // Use second-level precision for lastUpdate to match YAML format and avoid false external updates
+        val now = java.time.LocalDateTime.now().withNano(0)
+        
         val newTask = Task.fromRaw(filename, newRawContent).copy(
             id = taskId,
-            lastUpdate = java.time.LocalDateTime.now()
+            lastUpdate = now
         )
 
         val isEmpty = newTask.title.isBlank() && newTask.textContent.isBlank()
@@ -32,17 +36,26 @@ object TaskRepository {
         if (index != -1) {
             val oldTask = _tasks[index]
             if (isEmpty) {
+                if (context is com.example.opentask.ui.MainActivity) {
+                    context.addDebugLog("Memory: Deleting empty task ${oldTask.filename}")
+                }
                 _tasks.removeAt(index)
                 deleteTaskFile(context, oldTask.filename)
             } else {
-                // Optimization: Don't save if content hasn't changed
+                // Optimization: Don't save if content hasn't changed (including YAML properties)
                 if (oldTask.toRaw() == newRawContent) return
                 
+                if (context is com.example.opentask.ui.MainActivity) {
+                    context.addDebugLog("Memory: Updating task ${newTask.filename}")
+                }
                 _tasks[index] = newTask
                 saveTaskToFile(context, newTask)
             }
         } else if (!isEmpty) {
             // New task and not empty: add and save
+            if (context is com.example.opentask.ui.MainActivity) {
+                context.addDebugLog("Memory: Creating new task ${newTask.filename}")
+            }
             _tasks.add(0, newTask)
             saveTaskToFile(context, newTask)
         }
@@ -64,6 +77,7 @@ object TaskRepository {
         val rootFolder = DocumentFile.fromTreeUri(context, folderUri) ?: return
         
         var file = rootFolder.findFile(task.filename)
+        val isNewFile = file == null
         if (file == null) {
             file = rootFolder.createFile("text/markdown", task.filename)
         }
@@ -71,6 +85,10 @@ object TaskRepository {
         file?.let { f ->
             context.contentResolver.openOutputStream(f.uri, "wt")?.use { output ->
                 output.write(task.toRaw().toByteArray())
+            }
+            if (context is com.example.opentask.ui.MainActivity) {
+                val action = if (isNewFile) "Created" else "Updated"
+                context.addDebugLog("File: $action ${task.filename}")
             }
             onTaskSaved?.invoke(task.filename, f.lastModified(), task)
         }
@@ -83,6 +101,9 @@ object TaskRepository {
         val rootFolder = DocumentFile.fromTreeUri(context, folderUri) ?: return
         
         rootFolder.findFile(filename)?.delete()
+        if (context is com.example.opentask.ui.MainActivity) {
+            context.addDebugLog("File: Deleted $filename")
+        }
         onTaskDeleted?.invoke(filename)
     }
 

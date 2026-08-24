@@ -76,67 +76,75 @@ fun NoteDetailScreen(
     LaunchedEffect(task) {
         if (task.id == initialTask.id && task.lastUpdate != initialTask.lastUpdate) {
             val currentContent = textFieldValue.text
-            val initialContent = if (isParsedMode) initialTask.textContent else initialTask.toRaw()
-            val isDirty = titleValue != initialTask.title || currentContent != initialContent
             
-            if (isDirty) {
-                // Smart merge: Handle body, title, and YAML separately.
-                // YAML always follows the filesystem (remote) version as per policy.
-                
-                val remoteBody = task.textContent
-                val initialBody = initialTask.textContent
-                val localBody = if (isParsedMode) currentContent else Task.fromRaw(task.filename, currentContent).textContent
-                
-                val bodyChangedRemote = remoteBody != initialBody
-                val bodyChangedLocal = localBody != initialBody
-                
-                val newBody = if (bodyChangedRemote && bodyChangedLocal) {
-                    "<<<<<<< External\n$remoteBody\n=======\n$localBody\n>>>>>>> Local"
-                } else if (bodyChangedRemote) {
-                    remoteBody
-                } else {
-                    localBody
-                }
-
-                val titleChangedRemote = task.title != initialTask.title
-                val titleChangedLocal = titleValue != initialTask.title
-                
-                if (titleChangedRemote && titleChangedLocal) {
-                    titleValue = "CONFLICT: Local(${titleValue}) vs Remote(${task.title})"
-                } else if (titleChangedRemote) {
-                    titleValue = task.title
-                }
-
-                if (isParsedMode) {
-                    textFieldValue = TextFieldValue(
-                        text = newBody,
-                        selection = TextRange(newBody.length)
-                    )
-                } else {
-                    // In Raw mode, reconstruct the raw file using remote metadata (YAML) + merged body
-                    val mergedRaw = task.copy(title = titleValue, textContent = newBody).toRaw()
-                    textFieldValue = TextFieldValue(
-                        text = mergedRaw,
-                        selection = TextRange(mergedRaw.length)
-                    )
-                }
-                
-                initialTask = task
-                currentTaskState = task // Overwrite YAML metadata with filesystem version
+            val initialBody = initialTask.textContent
+            val remoteBody = task.textContent
+            val localBody = if (isParsedMode) currentContent else Task.fromRaw(task.filename, currentContent).textContent
+            
+            val initialTitle = initialTask.title
+            val remoteTitle = task.title
+            val localTitle = titleValue
+            
+            val localChanged = if (isParsedMode) {
+                localTitle != initialTitle || localBody != initialBody
             } else {
-                // Not dirty: auto-update to the new version
-                initialTask = task
-                currentTaskState = task
+                currentContent != initialTask.toRaw()
+            }
+            
+            val remoteChangedMeaningfully = remoteTitle != initialTitle || remoteBody != initialBody
+            
+            if (remoteChangedMeaningfully && localChanged) {
+                // Potential conflict. Check if they are actually different.
+                if (remoteTitle == localTitle && remoteBody == localBody) {
+                    // Same changes (e.g. our own save). Just sync base.
+                    if (!isParsedMode) {
+                        val newContent = task.toRaw()
+                        textFieldValue = textFieldValue.copy(
+                            text = newContent,
+                            selection = TextRange(
+                                textFieldValue.selection.start.coerceIn(0, newContent.length),
+                                textFieldValue.selection.end.coerceIn(0, newContent.length)
+                            )
+                        )
+                    }
+                } else {
+                    // ACTUAL CONFLICT
+                    val newBody = "<<<<<<< External\n$remoteBody\n=======\n$localBody\n>>>>>>> Local"
+                    val newTitle = if (remoteTitle != localTitle) "CONFLICT: Local(${localTitle}) vs Remote(${remoteTitle})" else localTitle
+                    
+                    titleValue = newTitle
+                    val newContent = if (isParsedMode) newBody else task.copy(title = newTitle, textContent = newBody).toRaw()
+                    textFieldValue = TextFieldValue(newContent, TextRange(newContent.length))
+                }
+            } else if (remoteChangedMeaningfully) {
+                // Remote changed, but local is clean. Auto-apply.
                 titleValue = task.title
                 val newContent = if (isParsedMode) task.textContent else task.toRaw()
-                textFieldValue = TextFieldValue(
+                textFieldValue = textFieldValue.copy(
                     text = newContent,
                     selection = TextRange(
                         textFieldValue.selection.start.coerceIn(0, newContent.length),
                         textFieldValue.selection.end.coerceIn(0, newContent.length)
                     )
                 )
+            } else if (!localChanged) {
+                // Only metadata (YAML) changed remotely, and local is clean. 
+                // Sync raw text if needed to show new metadata.
+                if (!isParsedMode) {
+                    val newContent = task.toRaw()
+                    textFieldValue = textFieldValue.copy(
+                        text = newContent,
+                        selection = TextRange(
+                            textFieldValue.selection.start.coerceIn(0, newContent.length),
+                            textFieldValue.selection.end.coerceIn(0, newContent.length)
+                        )
+                    )
+                }
             }
+
+            // Always update tracking state to latest remote version
+            initialTask = task
+            currentTaskState = task
         }
     }
 

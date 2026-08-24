@@ -121,6 +121,13 @@ class FolderWatcherManager(
                                 debugManager.log("FolderWatcherManager", lastEventInfo)
                                 changeDetected = true
                             }
+                        } else if (fileMetadataMap[name]!! > lastModified) {
+                            // This can happen if file system clock is slightly different or file was replaced with an older version
+                            if (showPush) {
+                                lastEventInfo = "Externally Replaced: $name"
+                                debugManager.log("FolderWatcherManager", lastEventInfo)
+                                changeDetected = true
+                            }
                         }
                     }
                 }
@@ -172,6 +179,7 @@ class FolderWatcherManager(
     }
 
     fun updateCache(name: String, lastModified: Long, task: Task) {
+        debugManager.log("FolderWatcherManager", "Cache synced for $name")
         fileMetadataMap[name] = lastModified
         taskCache[name] = task
     }
