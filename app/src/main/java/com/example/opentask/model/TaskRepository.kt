@@ -19,26 +19,32 @@ object TaskRepository {
 
     fun updateTask(context: Context, taskId: String, newRawContent: String) {
         val index = _tasks.indexOfFirst { it.id == taskId }
+        
+        // Use taskId as filename for new tasks (since createEmptyTask uses it)
+        val filename = if (index != -1) _tasks[index].filename else taskId
+        val newTask = Task.fromRaw(filename, newRawContent).copy(
+            id = taskId,
+            lastUpdate = java.time.LocalDateTime.now()
+        )
+
+        val isEmpty = newTask.title.isBlank() && newTask.textContent.isBlank()
+
         if (index != -1) {
             val oldTask = _tasks[index]
-            
-            // Optimization: Don't save if content hasn't changed
-            if (oldTask.toRaw() == newRawContent) {
-                return
-            }
-
-            val newTask = Task.fromRaw(oldTask.filename, newRawContent).copy(
-                id = oldTask.id,
-                lastUpdate = java.time.LocalDateTime.now()
-            )
-            
-            if (newTask.title.isBlank() && newTask.textContent.isBlank()) {
+            if (isEmpty) {
                 _tasks.removeAt(index)
                 deleteTaskFile(context, oldTask.filename)
             } else {
+                // Optimization: Don't save if content hasn't changed
+                if (oldTask.toRaw() == newRawContent) return
+                
                 _tasks[index] = newTask
                 saveTaskToFile(context, newTask)
             }
+        } else if (!isEmpty) {
+            // New task and not empty: add and save
+            _tasks.add(0, newTask)
+            saveTaskToFile(context, newTask)
         }
     }
 
@@ -87,7 +93,7 @@ object TaskRepository {
         val dateStr = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
         val filename = "$dateStr.md"
         
-        val newTask = Task(
+        return Task(
             id = filename,
             title = "",
             textContent = "",
@@ -95,7 +101,5 @@ object TaskRepository {
             createdAt = now,
             lastUpdate = now
         )
-        _tasks.add(0, newTask) // Add to the top of the list
-        return newTask
     }
 }

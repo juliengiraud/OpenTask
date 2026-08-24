@@ -154,8 +154,17 @@ fun NoteDetailScreen(
 
     val handleBackInternal = {
         val currentContent = if (isParsedMode) textFieldValue.text else Task.fromRaw(task.filename, textFieldValue.text).textContent
-        if (titleValue.isBlank() && currentContent.isBlank()) {
-            onSave(currentTaskState.copy(title = "", textContent = "").toRaw())
+        val initialContent = initialTask.textContent
+        
+        // Dirty check: check title and body. If in raw mode, also check the whole raw content for YAML changes.
+        val isDirty = if (isParsedMode) {
+            titleValue != initialTask.title || currentContent != initialContent
+        } else {
+            textFieldValue.text != initialTask.toRaw()
+        }
+
+        if (isDirty) {
+            handleSave(textFieldValue.text)
         }
         onBack()
     }
