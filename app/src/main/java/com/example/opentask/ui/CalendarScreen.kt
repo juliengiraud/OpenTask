@@ -206,7 +206,7 @@ fun CalendarScreen(
                                     .weight(if (showWeekNumber) 2f else 1f)
                                     .fillMaxHeight()
                                     .background(if (isInMonth) Color.White else AppConfig.CalendarOutOfMonthColor)
-                                    .padding(start = 4.dp, top = 0.dp),
+                                    .clickable(enabled = isInMonth) { /* Ripple effect only */ },
                                 contentAlignment = Alignment.TopStart
                             ) {
                                 val textColor = if (isInMonth) {
@@ -221,7 +221,8 @@ fun CalendarScreen(
                                 Text(
                                     text = targetDate.dayOfMonth.toString(),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = textColor
+                                    color = textColor,
+                                    modifier = Modifier.padding(start = 4.dp, top = 0.dp)
                                 )
                             }
                         }

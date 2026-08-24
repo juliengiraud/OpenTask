@@ -57,7 +57,7 @@ data class Task(
                             val value = parts[1].trim()
                             when (key) {
                                 "done", "completed" -> isDone = value.toBoolean()
-                                "due", "deadline" -> {
+                                "due", "deadline", "due_date" -> {
                                     try {
                                         dueDate = LocalDateTime.parse(value)
                                         hasTime = true

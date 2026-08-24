@@ -291,11 +291,20 @@ fun NoteDetailScreen(
                 } else {
                     task.filename
                 }
-                Text(
-                    text = shortFilename,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black
-                )
+                Column {
+                    Text(
+                        text = shortFilename,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Black
+                    )
+                    task.dueDate?.let {
+                        Text(
+                            text = "Due: ${it.toLocalDate()}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Red
+                        )
+                    }
+                }
 
                 Switch(
                     checked = isParsedMode,

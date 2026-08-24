@@ -109,7 +109,7 @@ object TaskRepository {
 
     fun getTaskTitles(): List<String> = _tasks.map { it.title }
 
-    fun createEmptyTask(): Task {
+    fun createEmptyTask(dueDate: java.time.LocalDateTime? = null): Task {
         val now = java.time.LocalDateTime.now()
         val dateStr = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
         val filename = "$dateStr.md"
@@ -120,7 +120,8 @@ object TaskRepository {
             textContent = "",
             filename = filename,
             createdAt = now,
-            lastUpdate = now
+            lastUpdate = now,
+            dueDate = dueDate
         )
     }
 }

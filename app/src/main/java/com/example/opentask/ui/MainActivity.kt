@@ -77,9 +77,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        fun createNewTask(context: Context, exitOnBack: Boolean = false) {
+        fun createNewTask(context: Context, exitOnBack: Boolean = false, dueDate: java.time.LocalDateTime? = null) {
             if (context is MainActivity) {
-                val newTask = TaskRepository.createEmptyTask()
+                val newTask = TaskRepository.createEmptyTask(dueDate)
                 openTask(context, newTask, isEditMode = true, exitOnBack = exitOnBack)
             } else {
                 context.startActivity(createIntent(context, isEditMode = true, exitOnBack = exitOnBack, createNew = true))
@@ -308,7 +308,11 @@ fun OpenTaskApp(
             floatingActionButton = {
                 AddNoteButton(
                     onClick = {
-                        MainActivity.createNewTask(activity)
+                        val currentTab = AppTabs.entries[pagerState.currentPage % actualPageCount]
+                        val dueDate = if (currentTab == AppTabs.CALENDAR) {
+                            java.time.LocalDate.now().atStartOfDay()
+                        } else null
+                        MainActivity.createNewTask(activity, dueDate = dueDate)
                     }
                 )
             }
