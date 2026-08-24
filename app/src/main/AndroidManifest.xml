@@ -40,6 +40,7 @@
             android:name=".ui.PopupActivity"
             android:theme="@style/Theme.Transparent"
             android:launchMode="singleTop"
+            android:taskAffinity=".popup"
             android:exported="false" />
     </application>
 

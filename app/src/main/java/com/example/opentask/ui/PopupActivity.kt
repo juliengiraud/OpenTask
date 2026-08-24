@@ -38,7 +38,7 @@ import com.example.opentask.util.DateUtils
 import java.time.LocalDate
 
 class PopupActivity : ComponentActivity() {
-    private var currentDate by mutableStateOf(java.time.LocalDate.now())
+    private var currentDate by mutableStateOf(LocalDate.now())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

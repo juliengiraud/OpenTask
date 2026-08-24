@@ -63,8 +63,14 @@ class MainActivity : ComponentActivity() {
                 if (dueDate != null) putExtra(EXTRA_DUE_DATE, dueDate.toString())
                 
                 if (context !is android.app.Activity) {
+                    // Mandatory for non-activity contexts (like Service)
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                } else if (!exitOnBack) {
+                    // For internal tab switching in the main app, avoid multiple instances
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
                 }
+                // When exitOnBack is true (e.g. editor opened from popup), we use 0 flags
+                // to stay in the caller's task (Popup task) without bringing the main app task to front.
             }
         }
 
