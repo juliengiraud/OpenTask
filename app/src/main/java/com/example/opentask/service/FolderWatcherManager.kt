@@ -77,8 +77,11 @@ class FolderWatcherManager(
 
     private fun scanFolder(treeUri: Uri, showPush: Boolean) {
         val childrenUri = currentChildrenUri ?: return
+        val startTime = System.currentTimeMillis()
+        val isInitialScan = fileMetadataMap.isEmpty()
         try {
             val cursor = context.contentResolver.query(childrenUri, PROJECTION, null, null, null)
+            val queryDuration = System.currentTimeMillis() - startTime
             val newMetadata = mutableMapOf<String, Long>()
             var changeDetected = false
             val loadedTasks = mutableListOf<Task>()
@@ -141,6 +144,10 @@ class FolderWatcherManager(
                     }
                 }
             }
+
+            val totalDuration = System.currentTimeMillis() - startTime
+            val typePrefix = if (isInitialScan) "Initial exploration" else "Periodic scan"
+            debugManager.log("FolderWatcherManager", "$typePrefix: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
 
             if (changeDetected || fileMetadataMap.isEmpty()) {
                 if (fileMetadataMap.isEmpty() && newMetadata.isEmpty()) {
