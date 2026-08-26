@@ -145,6 +145,7 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         watchedFolder = prefs.getString("watched_folder", null)
         AppConfig.showWeekNumber = prefs.getBoolean("show_week_number", true)
+        AppConfig.logPeriodicScan = prefs.getBoolean("log_periodic_scan", false)
 
         handleIntent(intent)
 
@@ -365,6 +366,11 @@ fun OpenTaskApp(
                             AppConfig.showWeekNumber = it
                             val prefs = activity.getSharedPreferences("settings", Context.MODE_PRIVATE)
                             prefs.edit { putBoolean("show_week_number", it) }
+                        },
+                        onToggleLogPeriodicScan = {
+                            AppConfig.logPeriodicScan = it
+                            val prefs = activity.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                            prefs.edit { putBoolean("log_periodic_scan", it) }
                         },
                         watchedFolder = watchedFolder,
                         debugLogs = debugLogs,

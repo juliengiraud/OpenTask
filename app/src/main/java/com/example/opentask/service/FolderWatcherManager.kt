@@ -9,6 +9,7 @@ import android.provider.DocumentsContract
 import androidx.core.net.toUri
 import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
+import com.example.opentask.ui.AppConfig
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -147,7 +148,9 @@ class FolderWatcherManager(
 
             val totalDuration = System.currentTimeMillis() - startTime
             val typePrefix = if (isInitialScan) "Initial exploration" else "Periodic scan"
-            debugManager.log("FolderWatcherManager", "$typePrefix: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
+            if (isInitialScan || AppConfig.logPeriodicScan) {
+                debugManager.log("FolderWatcherManager", "$typePrefix: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
+            }
 
             if (changeDetected || fileMetadataMap.isEmpty()) {
                 if (fileMetadataMap.isEmpty() && newMetadata.isEmpty()) {

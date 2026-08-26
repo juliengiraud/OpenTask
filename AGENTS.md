@@ -38,6 +38,7 @@
   - **Empty Space Interaction:** In the editor, a tap on any empty space below the text should request focus and move the cursor to the end of the content.
   - **Visual Feedback:** Use `AppConfig.EditorFocusBorderColor` (typically orange) for active focus borders in editors.
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
+  - **Logging Control:** Use `AppConfig.logPeriodicScan` to toggle detailed filesystem scan logs in the `DebugPanel`. Initial scans are always logged for performance baseline monitoring.
 - **Model-Driven Parsing:** Move all data-specific parsing and reconstruction logic (like Obsidian file handling) into the relevant model classes (e.g., `Task`). The UI should remain agnostic to the storage format and only handle presentation states (like toggling between parsed/raw views).
   - **Deterministic Identifiers:** For file-synced models, use the unique filename as the `id`. This prevents background scans or saves from breaking UI state by generating new random UUIDs for the same file.
   - **Conflict Resolution Policy:**

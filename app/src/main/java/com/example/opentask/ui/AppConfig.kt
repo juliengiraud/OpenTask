@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 
 object AppConfig {
     var showWeekNumber by mutableStateOf(true)
+    var logPeriodicScan by mutableStateOf(false)
 
     val DefaultBackgroundColor = Color(0xFFEEEEEE)
     val AddNoteButtonBackgroundColor = Color(0xFF4CAF50) // A nice green
