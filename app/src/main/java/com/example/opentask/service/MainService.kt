@@ -1,7 +1,10 @@
 package com.example.opentask.service
 
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.IBinder
 import com.example.opentask.model.TaskRepository
 
@@ -10,6 +13,21 @@ class MainService : Service() {
     private lateinit var folderWatcherManager: FolderWatcherManager
     private lateinit var notificationManager: AppNotificationManager
     private lateinit var debugManager: DebugManager
+
+    private val dateChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_DATE_CHANGED || 
+                intent?.action == Intent.ACTION_TIME_TICK || 
+                intent?.action == Intent.ACTION_TIMEZONE_CHANGED) {
+                // We use TIME_TICK as a fallback because DATE_CHANGED can sometimes be unreliable 
+                // depending on how the system manages it, but mostly we want to ensure 
+                // that at least once per minute we check if we need to update the notification.
+                // However, for performance, maybe just DATE_CHANGED and TIMEZONE_CHANGED are enough.
+                // Let's stick to DATE_CHANGED and TIMEZONE_CHANGED first.
+                updateNotification()
+            }
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -36,6 +54,12 @@ class MainService : Service() {
                 updateNotification()
             }
         }
+
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_DATE_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+        }
+        registerReceiver(dateChangeReceiver, filter)
 
         debugManager.log("MainService", "Service Created")
     }
@@ -65,6 +89,7 @@ class MainService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterReceiver(dateChangeReceiver)
         folderWatcherManager.stop()
         TaskRepository.onTaskSaved = null
         TaskRepository.onTaskDeleted = null

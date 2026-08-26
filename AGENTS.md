@@ -81,6 +81,7 @@
   - Even if `IMPORTANCE_DEFAULT` is used for the channel, vibration can be disabled via `enableVibration(false)` and `setSound(null, null)` on the `NotificationChannel` object.
   - **Channel Rotation:** Android caches notification channel settings. If you change importance, sound, or vibration settings in code, you MUST increment the `channelId` (e.g., from `v5` to `v6`) for the changes to take effect on existing installs.
   - **PendingIntent Stability:** Use a stable request code (e.g., `0`) in `PendingIntent.getActivity` for the notification's content intent. Using dynamic codes (like timestamps) can cause the system to treat every update as a new notification, leading to visual glitches or unwanted alerts.
+  - **Date Change Handling:** The `MainService` must listen for `Intent.ACTION_DATE_CHANGED` and `Intent.ACTION_TIMEZONE_CHANGED` to ensure the permanent notification is refreshed when a new day starts, even if no tasks are modified.
   - **Content Filtering:** The permanent notification and its associated `PopupActivity` should only display tasks for the current day that are not yet marked as done. A task belongs to "today" if its `due_date` is today.
 - **Performance Optimization:** Use the `_tasksByDate` map in `TaskRepository` for fast lookup of notes by date. Any operation that modifies the main task list must call `rebuildIndex()` to keep the map in sync.
 
