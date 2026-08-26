@@ -59,6 +59,9 @@
 - **Navigation Flow:**
   - When opening a task for editing from an external source (like a popup), use `exitOnBack = true` to ensure the user returns to the previous context when they finish or go back.
   - **Unique Page Stack:** For tab or pager-based navigation, the back stack should only contain unique pages. When pushing a page to the stack, if it already exists, remove the oldest occurrence to prevent an infinite stack and ensure the back button cycles through distinct recent locations.
+  - **Tab State Reset:** For specific screens like `CalendarScreen`, the local view state (e.g., selected month) should reset to the default ("Today") when the user navigates away from the tab.
+    - For **swiping**, use `pagerState.settledPage` to ensure the reset only occurs once the transition is completed and the user has released the screen (avoiding jumps during "peeking").
+    - For **button navigation**, use a manual trigger in `onTabClick` to ensure the reset happens immediately even if the user navigates back quickly before the animation settles.
 - **Activity Lifecycle & Navigation:** `MainActivity` uses `standard` launch mode (not `singleTop`) to allow transient editor instances to exist on top of `PopupActivity` without finishing the main application's instance. Use `exitOnBack = true` for these transient instances.
 - **Layout Structure:**
   - `MainActivity` uses a standard `Scaffold`. The `MainBottomBar` goes into the `bottomBar` slot, and `AddNoteButton` goes into the `floatingActionButton` slot. This ensures the list content is correctly padded.

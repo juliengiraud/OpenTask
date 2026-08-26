@@ -236,6 +236,7 @@ fun OpenTaskApp(
     var lastKnownPage by remember { mutableIntStateOf(pagerState.currentPage) }
     val navigationStack = remember { mutableStateListOf<Int>() }
     var isBackNavigating by remember { mutableStateOf(false) }
+    var calendarResetTrigger by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(pagerState.currentPage) {
         if (!isBackNavigating && pagerState.currentPage != lastKnownPage) {
@@ -310,6 +311,10 @@ fun OpenTaskApp(
                 MainBottomBar(
                     selectedTabIndex = pagerState.currentPage % actualPageCount,
                     onTabClick = { index ->
+                        val currentActualIndex = pagerState.currentPage % actualPageCount
+                        if (currentActualIndex == AppTabs.entries.indexOf(AppTabs.CALENDAR) && index != currentActualIndex) {
+                            calendarResetTrigger++
+                        }
                         scope.launch {
                             val currentVirtualPage = pagerState.currentPage
                             val currentActualIndex = currentVirtualPage % actualPageCount
@@ -349,7 +354,9 @@ fun OpenTaskApp(
                             }
                             activity.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        isActive = pagerState.settledPage == pageIndex,
+                        resetTrigger = calendarResetTrigger
                     )
                     AppTabs.SETTINGS -> SettingsScreen(
                         onSelectFolder = onSelectFolder,

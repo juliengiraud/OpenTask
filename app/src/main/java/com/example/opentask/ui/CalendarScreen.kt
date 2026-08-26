@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,9 +47,18 @@ import java.util.Locale
 @Composable
 fun CalendarScreen(
     onDateClick: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isActive: Boolean = true,
+    resetTrigger: Int = 0
 ) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+
+    // Reset month when swiping away/back or via manual trigger
+    LaunchedEffect(isActive, resetTrigger) {
+        if (!isActive || resetTrigger > 0) {
+            selectedDate = LocalDate.now()
+        }
+    }
     var totalDragY by remember { mutableFloatStateOf(0f) }
     val dragThreshold = 50f // Minimum distance to trigger a swipe
 
