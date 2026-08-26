@@ -50,6 +50,7 @@
     - Raw format: YAML frontmatter -> 1 empty line -> `# Title` -> 1 empty line -> Inner Content -> at least 1 empty line at the bottom.
     - `Task.fromRaw` extracts the creation date strictly from the filename (`yyyy-MM-dd_HH-mm-ss.md`).
     - `Task.toRaw` always enforces the standard spacing (1 empty line after YAML, 1 empty line after Title, and 1 empty line at the end of the file).
+    - **YAML Preservation:** When parsing YAML, only the properties managed by the app (done, due_date, hastime, last_update, creation_date and their variants) are extracted into `Task` fields. All other lines (comments, extra properties) are stored in `extraYaml` and preserved exactly in `toRaw`. This ensures a "perfect merge" where unmanaged data is left unchanged.
 - **DRY Principle:**
   - Centralize navigation and task creation logic in `MainActivity.companion`.
   - Use `MainActivity.openTask()` and `MainActivity.createNewTask()` for consistent behavior across the app and popups.

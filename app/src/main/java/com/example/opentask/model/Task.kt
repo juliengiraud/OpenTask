@@ -16,10 +16,18 @@ data class Task(
     val hasTime: Boolean = false,
     val duration: TaskDuration? = null,
     val isDone: Boolean = false,
-    val yaml: String = ""
+    val extraYaml: List<String> = emptyList()
 ) {
     companion object {
         private val filenameFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
+
+        private val MANAGED_KEYS = setOf(
+            "done", "completed",
+            "due", "deadline", "due_date",
+            "hastime",
+            "last_update", "updated",
+            "creation_date", "created"
+        )
 
         fun fromRaw(filename: String, rawContent: String): Task {
             var createdAt = LocalDateTime.now()
@@ -34,7 +42,7 @@ data class Task(
             }
 
             val lines = rawContent.lines()
-            var yaml = ""
+            val extraYaml = mutableListOf<String>()
             var title = ""
             var bodyStartLine = 0
 
@@ -46,14 +54,13 @@ data class Task(
             if (lines.isNotEmpty() && lines[0] == "---") {
                 val closingIndex = lines.drop(1).indexOf("---")
                 if (closingIndex != -1) {
-                    val yamlLines = lines.slice(0..closingIndex + 1)
-                    yaml = yamlLines.joinToString("\n")
-                    
-                    // Basic YAML property parsing
-                    yamlLines.forEach { line ->
+                    // Parse YAML lines between delimiters
+                    for (i in 1 until (closingIndex + 1)) {
+                        val line = lines[i]
                         val parts = line.split(":", limit = 2)
-                        if (parts.size == 2) {
-                            val key = parts[0].trim().lowercase()
+                        val key = if (parts.size == 2) parts[0].trim().lowercase() else null
+                        
+                        if (key != null && key in MANAGED_KEYS) {
                             val value = parts[1].trim()
                             when (key) {
                                 "done", "completed" -> isDone = value.toBoolean()
@@ -69,12 +76,27 @@ data class Task(
                                     }
                                 }
                                 "hastime" -> hasTime = value.toBoolean()
-                                "last_update" -> {
+                                "last_update", "updated" -> {
                                     try {
                                         lastUpdate = LocalDateTime.parse(value, filenameFormatter)
-                                    } catch (e: Exception) {}
+                                    } catch (e: Exception) {
+                                        try {
+                                            lastUpdate = LocalDateTime.parse(value)
+                                        } catch (e2: Exception) {}
+                                    }
+                                }
+                                "creation_date", "created" -> {
+                                    try {
+                                        createdAt = LocalDateTime.parse(value, filenameFormatter)
+                                    } catch (e: Exception) {
+                                        try {
+                                            createdAt = LocalDateTime.parse(value)
+                                        } catch (e2: Exception) {}
+                                    }
                                 }
                             }
+                        } else {
+                            extraYaml.add(line)
                         }
                     }
 
@@ -84,7 +106,7 @@ data class Task(
                     }
                     
                     if (current < lines.size && lines[current].startsWith("# ")) {
-                        title = lines[current].substring(2)
+                        title = lines[current].substring(2).trim()
                         bodyStartLine = current + 1
                     } else {
                         bodyStartLine = closingIndex + 2
@@ -96,7 +118,7 @@ data class Task(
                     current++
                 }
                 if (current < lines.size && lines[current].startsWith("# ")) {
-                    title = lines[current].substring(2)
+                    title = lines[current].substring(2).trim()
                     bodyStartLine = current + 1
                 }
             }
@@ -116,7 +138,7 @@ data class Task(
                 filename = filename,
                 createdAt = createdAt,
                 lastUpdate = lastUpdate,
-                yaml = yaml,
+                extraYaml = extraYaml,
                 isDone = isDone,
                 dueDate = dueDate,
                 hasTime = hasTime,
@@ -145,24 +167,9 @@ data class Task(
         }
         if (hasTime) sb.append("hastime: true\n")
         
-        // Add any other existing YAML properties that aren't handled above
-        if (yaml.isNotEmpty()) {
-            val lines = yaml.lines()
-            // We want to skip the first and last lines (the --- delimiters)
-            // and also skip properties we've already handled
-            val propertyLines = if (lines.firstOrNull() == "---") {
-                val closingIndex = lines.drop(1).indexOf("---")
-                if (closingIndex != -1) {
-                    lines.subList(1, closingIndex + 1)
-                } else emptyList()
-            } else emptyList()
-
-            propertyLines.forEach { line ->
-                val key = line.split(":", limit = 2).firstOrNull()?.trim()?.lowercase()
-                if (key != null && key.isNotEmpty() && key !in listOf("creation_date", "last_update", "done", "completed", "due", "deadline", "hastime", "due_date")) {
-                    sb.append(line).append("\n")
-                }
-            }
+        // Add any other existing YAML properties that weren't handled above
+        extraYaml.forEach { line ->
+            sb.append(line).append("\n")
         }
         sb.append("---\n\n")
 
