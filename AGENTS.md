@@ -41,12 +41,18 @@
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
   - **Logging Control:** Use `AppConfig.logPeriodicScan` to toggle detailed filesystem scan logs in the `DebugPanel`. Initial scans are always logged for performance baseline monitoring.
 - **Model-Driven Parsing:** Move all data-specific parsing and reconstruction logic (like Obsidian file handling) into the relevant model classes (e.g., `Task`). The UI should remain agnostic to the storage format and only handle presentation states (like toggling between parsed/raw views).
+  - **Note Editing Logic:** 
+    - Parsed mode is the default.
+    - Editing is only permitted in **parsed mode**. The edit button is disabled while in raw mode.
+    - The mode toggle (Switch) is disabled while editing.
+    - Auto-save on back only occurs in parsed mode if changes are detected.
   - **Deterministic Identifiers:** For file-synced models, use the unique filename as the `id`. This prevents background scans or saves from breaking UI state by generating new random UUIDs for the same file.
   - **Conflict Resolution Policy:**
     - If a conflict occurs during editing (file changed on disk while user has unsaved changes), the **YAML frontmatter from the filesystem always wins** (overwrites local changes).
     - Body content and Titles are merged using a smart strategy:
-      - If both sides changed the same part, conflict markers are used (`<<<<<<< External ...`).
+      - If both sides changed the same part, conflict markers are used (`<<<<<<< APP ...`).
       - If only one side changed, the changes are auto-merged without markers.
+      - **Titles use word-level diffing** (`MergeUtils.generateConflict` with `" "` separator) to minimize conflict markers and preserve unchanged words.
   - **Obsidian File Structure:**
     - Raw format: YAML frontmatter -> 1 empty line -> `# Title` -> 1 empty line -> Inner Content -> at least 1 empty line at the bottom.
     - `Task.fromRaw` extracts the creation date strictly from the filename (`yyyy-MM-dd_HH-mm-ss.md`).

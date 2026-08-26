@@ -59,7 +59,7 @@ fun NoteDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isParsedMode by remember { mutableStateOf(false) }
+    var isParsedMode by remember { mutableStateOf(true) }
     
     // Track the version of the task we started with
     var initialTask by remember(task.id) { mutableStateOf(task) }
@@ -142,28 +142,17 @@ fun NoteDetailScreen(
     val titleFocusRequester = remember { FocusRequester() }
     val bodyFocusRequester = remember { FocusRequester() }
 
-    val handleSave = { content: String ->
-        val toSave = if (isParsedMode) {
-            currentTaskState.copy(title = titleValue, textContent = content).toRaw()
-        } else {
-            content
-        }
+    val handleSave = { bodyContent: String ->
+        val toSave = currentTaskState.copy(title = titleValue, textContent = bodyContent).toRaw()
         onSave(toSave)
     }
 
     val handleBackInternal = {
-        val currentContent = if (isParsedMode) textFieldValue.text else Task.fromRaw(task.filename, textFieldValue.text).textContent
-        val initialContent = initialTask.textContent
-        
-        // Dirty check: check title and body. If in raw mode, also check the whole raw content for YAML changes.
-        val isDirty = if (isParsedMode) {
-            titleValue != initialTask.title || currentContent != initialContent
-        } else {
-            textFieldValue.text != initialTask.toRaw()
-        }
-
-        if (isDirty) {
-            handleSave(textFieldValue.text)
+        if (isParsedMode) {
+            val isDirty = titleValue != initialTask.title || textFieldValue.text != initialTask.textContent
+            if (isDirty) {
+                handleSave(textFieldValue.text)
+            }
         }
         onBack()
     }
@@ -172,18 +161,6 @@ fun NoteDetailScreen(
 
     LaunchedEffect(isEditMode) {
         if (isEditMode) {
-            if (!isParsedMode) {
-                // Force switch to parsed mode for editing
-                val newTask = Task.fromRaw(task.filename, textFieldValue.text)
-                currentTaskState = newTask
-                textFieldValue = TextFieldValue(
-                    text = newTask.textContent,
-                    selection = TextRange(newTask.textContent.length)
-                )
-                titleValue = newTask.title
-                isParsedMode = true
-            }
-            
             if (titleValue.isEmpty()) {
                 titleFocusRequester.requestFocus()
             } else {
@@ -259,13 +236,14 @@ fun NoteDetailScreen(
                     text = if (isEditMode) "✓" else "✎",
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier
-                        .clickable { 
+                        .clickable(enabled = isParsedMode || isEditMode) {
                             if (isEditMode) {
                                 handleSave(textFieldValue.text)
                             }
-                            onEditModeChange(!isEditMode) 
+                            onEditModeChange(!isEditMode)
                         }
-                        .padding(start = 12.dp)
+                        .padding(start = 12.dp),
+                    color = if (isParsedMode || isEditMode) Color.Black else Color.Gray
                 )
             }
         }
@@ -330,6 +308,7 @@ fun NoteDetailScreen(
             textFieldValue = textFieldValue,
             onValueChange = { textFieldValue = it },
             isEditMode = isEditMode,
+            isParsedMode = isParsedMode,
             onEditModeChange = onEditModeChange,
             focusRequester = bodyFocusRequester,
             modifier = Modifier.weight(1f)
@@ -342,6 +321,7 @@ private fun NoteEditorPanel(
     textFieldValue: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     isEditMode: Boolean,
+    isParsedMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier
@@ -464,16 +444,18 @@ private fun NoteEditorPanel(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onDoubleTap = { offset ->
-                                        textLayoutResult?.let { layout ->
-                                            val index = layout.getOffsetForPosition(offset)
-                                            onValueChange(textFieldValue.copy(selection = TextRange(index)))
+                            .pointerInput(isParsedMode) {
+                                if (isParsedMode) {
+                                    detectTapGestures(
+                                        onDoubleTap = { offset ->
+                                            textLayoutResult?.let { layout ->
+                                                val index = layout.getOffsetForPosition(offset)
+                                                onValueChange(textFieldValue.copy(selection = TextRange(index)))
+                                            }
+                                            onEditModeChange(true)
                                         }
-                                        onEditModeChange(true)
-                                    }
-                                )
+                                    )
+                                }
                             }
                     )
                 }
