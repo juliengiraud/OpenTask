@@ -32,16 +32,23 @@ It has multiple lines.
         assertEquals(LocalDateTime.of(2023, 10, 28, 0, 0), task.dueDate)
         assertFalse(task.hasTime)
         
-        // Check extra YAML preservation
-        assertTrue(task.extraYaml.contains("custom_prop: value"))
-        assertTrue(task.extraYaml.contains("# comment line"))
-
-        // Round trip
+        // Exact reconstruction check
         val reconstructed = task.toRaw()
-        assertTrue(reconstructed.contains("custom_prop: value"))
-        assertTrue(reconstructed.contains("# comment line"))
-        assertTrue(reconstructed.contains("# My Test Title"))
-        assertTrue(reconstructed.endsWith("\n\n# My Test Title\n\nThis is the content of the task.\nIt has multiple lines.\n"))
+        val expected = """---
+creation_date: 2023-10-27_10-30-00
+last_update: 2023-10-27_11-00-00
+done: true
+due_date: 2023-10-28
+custom_prop: value
+# comment line
+---
+
+# My Test Title
+
+This is the content of the task.
+It has multiple lines.
+"""
+        assertEquals(expected, reconstructed)
     }
 
     @Test
@@ -56,6 +63,14 @@ Just content.
         assertEquals("Simple Title", task.title)
         assertEquals("Just content.", task.textContent)
         assertEquals(LocalDateTime.of(2023, 10, 27, 10, 30), task.createdAt)
+        
+        val expected = "---\n" +
+                "creation_date: 2023-10-27_10-30-00\n" +
+                "last_update: 2023-10-27_10-30-00\n" +
+                "---\n\n" +
+                "# Simple Title\n\n" +
+                "Just content.\n"
+        assertEquals(expected, task.toRaw())
     }
 
     @Test
@@ -65,6 +80,14 @@ Just content.
         val task = Task.fromRaw(filename, raw)
         assertEquals("", task.title)
         assertEquals("No title, just text.", task.textContent)
+        
+        val expected = "---\n" +
+                "creation_date: 2023-10-27_10-30-00\n" +
+                "last_update: 2023-10-27_10-30-00\n" +
+                "---\n\n" +
+                "# \n\n" +
+                "No title, just text.\n"
+        assertEquals(expected, task.toRaw())
     }
 
     @Test
@@ -81,6 +104,16 @@ updated: 2023-11-01_12-00-00
         assertEquals(LocalDateTime.of(2023, 12, 25, 15, 0), task.dueDate)
         assertTrue(task.hasTime)
         assertEquals(LocalDateTime.of(2023, 11, 1, 12, 0), task.lastUpdate)
+        
+        val expected = "---\n" +
+                "creation_date: 2023-10-27_10-30-00\n" +
+                "last_update: 2023-11-01_12-00-00\n" +
+                "done: true\n" +
+                "due_date: 2023-12-25T15:00\n" +
+                "hastime: true\n" +
+                "---\n\n" +
+                "# \n\n\n"
+        assertEquals(expected, task.toRaw())
     }
 
     @Test
@@ -110,7 +143,16 @@ Content with trailing spaces
         
         val reconstructed = task.toRaw()
         // Should enforce standard spacing: 1 empty line after title, 1 at end
-        assertTrue(reconstructed.contains("# Title with spaces\n\nContent with trailing spaces\n"))
+        val expected = """---
+creation_date: 2023-10-27_10-30-00
+last_update: 2023-10-27_10-30-00
+---
+
+# Title with spaces
+
+Content with trailing spaces
+"""
+        assertEquals(expected, reconstructed)
     }
 
     @Test
@@ -122,16 +164,17 @@ priority: high
 ---
 # Test
 """
-        val task = Task.fromRaw("test.md", raw)
-        assertEquals(2, task.extraYaml.size)
-        assertEquals("tags: [todo, urgent]", task.extraYaml[0])
-        assertEquals("priority: high", task.extraYaml[1])
+        val task = Task.fromRaw("2023-01-01_10-00-00.md", raw)
         
         val reconstructed = task.toRaw()
-        assertTrue(reconstructed.contains("tags: [todo, urgent]"))
-        assertTrue(reconstructed.contains("priority: high"))
-        // Managed key should be written by toRaw
-        assertTrue(reconstructed.contains("creation_date: 2023-01-01_10-00-00"))
+        val expected = "---\n" +
+                "creation_date: 2023-01-01_10-00-00\n" +
+                "last_update: 2023-01-01_10-00-00\n" +
+                "tags: [todo, urgent]\n" +
+                "priority: high\n" +
+                "---\n\n" +
+                "# Test\n\n\n"
+        assertEquals(expected, reconstructed)
     }
 
     @Test
@@ -141,9 +184,15 @@ description: "This is a test: with a colon"
 ---
 # Title
 """
-        val task = Task.fromRaw("test.md", raw)
-        assertEquals(1, task.extraYaml.size)
-        assertEquals("description: \"This is a test: with a colon\"", task.extraYaml[0])
+        val task = Task.fromRaw("2023-01-01_10-00-00.md", raw)
+        val reconstructed = task.toRaw()
+        val expected = "---\n" +
+                "creation_date: 2023-01-01_10-00-00\n" +
+                "last_update: 2023-01-01_10-00-00\n" +
+                "description: \"This is a test: with a colon\"\n" +
+                "---\n\n" +
+                "# Title\n\n\n"
+        assertEquals(expected, reconstructed)
     }
 
     @Test
@@ -155,9 +204,17 @@ description: "This is a test: with a colon"
 
 Content
 """
-        val task = Task.fromRaw("test.md", raw)
+        val task = Task.fromRaw("2023-01-01_10-00-00.md", raw)
         assertEquals("Title 1", task.title)
         assertEquals("# Title 2\n\nContent", task.textContent)
+        
+        val expected = "---\n" +
+                "creation_date: 2023-01-01_10-00-00\n" +
+                "last_update: 2023-01-01_10-00-00\n" +
+                "---\n\n" +
+                "# Title 1\n\n" +
+                "# Title 2\n\nContent\n"
+        assertEquals(expected, task.toRaw())
     }
 
     @Test
@@ -167,10 +224,18 @@ Content
 # Title
 Content
 """
-        val task = Task.fromRaw("test.md", raw)
-        assertEquals("Title", task.title)
-        assertEquals("Content", task.textContent)
-        assertTrue(task.extraYaml.isEmpty())
+        val task = Task.fromRaw("2023-01-01_10-00-00.md", raw)
+        val reconstructed = task.toRaw()
+        val expected = """---
+creation_date: 2023-01-01_10-00-00
+last_update: 2023-01-01_10-00-00
+---
+
+# Title
+
+Content
+"""
+        assertEquals(expected, reconstructed)
     }
 
     @Test
@@ -184,5 +249,133 @@ done: true
         val task = Task.fromRaw("test.md", raw)
         assertEquals("", task.title)
         assertTrue(task.textContent.contains("done: true"))
+    }
+
+    @Test
+    fun `test trivial merge - local change only`() {
+        val base = Task(
+            filename = "2023-01-01_10-00-00.md",
+            createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
+            title = "Base Title", 
+            textContent = "Base Content"
+        )
+        val local = base.copy(textContent = "Local Content")
+        val remote = base.copy()
+        
+        val merged = Task.merge(base, local, remote)
+        val expected = "---\n" +
+                "creation_date: 2023-01-01_10-00-00\n" +
+                "last_update: 2023-01-01_10-00-00\n" +
+                "---\n\n" +
+                "# Base Title\n\n" +
+                "Local Content\n"
+        assertEquals(expected, merged.toRaw())
+    }
+
+    @Test
+    fun `test trivial merge - remote change only`() {
+        val base = Task(
+            filename = "2023-01-01_10-00-00.md",
+            createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
+            title = "Base Title", 
+            textContent = "Base Content"
+        )
+        val local = base.copy()
+        val remote = base.copy(
+            title = "Remote Title",
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 11, 0)
+        )
+        
+        val merged = Task.merge(base, local, remote)
+        val expected = "---\n" +
+                "creation_date: 2023-01-01_10-00-00\n" +
+                "last_update: 2023-01-01_11-00-00\n" +
+                "---\n\n" +
+                "# Remote Title\n\n" +
+                "Base Content\n"
+        assertEquals(expected, merged.toRaw())
+    }
+
+    @Test
+    fun `test identical changes merge`() {
+        val base = Task(
+            filename = "2023-01-01_10-00-00.md",
+            createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
+            title = "Base", 
+            textContent = "Base"
+        )
+        val local = base.copy(title = "New", textContent = "New")
+        val remote = base.copy(
+            title = "New", 
+            textContent = "New",
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 11, 0)
+        )
+        
+        val merged = Task.merge(base, local, remote)
+        val expected = "---\n" +
+                "creation_date: 2023-01-01_10-00-00\n" +
+                "last_update: 2023-01-01_11-00-00\n" +
+                "---\n\n" +
+                "# New\n\n" +
+                "New\n"
+        assertEquals(expected, merged.toRaw())
+    }
+
+    @Test
+    fun `test conflict in title and body`() {
+        val base = Task(
+            filename = "2023-01-01_10-00-00.md",
+            createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
+            title = "Base", 
+            textContent = "Base content"
+        )
+        val local = base.copy(title = "Local Title", textContent = "Local content")
+        val remote = base.copy(
+            title = "Remote Title", 
+            textContent = "Remote content",
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 11, 0)
+        )
+        
+        val merged = Task.merge(base, local, remote)
+        val expected = "---\n" +
+                "creation_date: 2023-01-01_10-00-00\n" +
+                "last_update: 2023-01-01_11-00-00\n" +
+                "---\n\n" +
+                "# CONFLICT: Local(Local Title) vs Remote(Remote Title)\n\n" +
+                "<<<<<<< External\n" +
+                "Remote content\n" +
+                "=======\n" +
+                "Local content\n" +
+                ">>>>>>> Local\n"
+        assertEquals(expected, merged.toRaw())
+    }
+
+    @Test
+    fun `test YAML conflict - remote always wins`() {
+        val base = Task(
+            filename = "2023-01-01_10-00-00.md",
+            createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
+            isDone = false
+        )
+        val local = base.copy(isDone = true)
+        val remote = base.copy(
+            isDone = false, 
+            extraYaml = listOf("tags: [remote]"),
+            lastUpdate = LocalDateTime.of(2023, 1, 1, 11, 0)
+        )
+        
+        val merged = Task.merge(base, local, remote)
+        val expected = "---\n" +
+                "creation_date: 2023-01-01_10-00-00\n" +
+                "last_update: 2023-01-01_11-00-00\n" +
+                "tags: [remote]\n" +
+                "---\n\n" +
+                "# \n\n\n"
+        assertEquals(expected, merged.toRaw())
     }
 }

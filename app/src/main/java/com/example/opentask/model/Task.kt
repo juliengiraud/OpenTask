@@ -18,6 +18,39 @@ data class Task(
     val isDone: Boolean = false,
     val extraYaml: List<String> = emptyList()
 ) {
+    fun toRaw(): String {
+        val sb = StringBuilder()
+        
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
+        val createdAtStr = createdAt.format(formatter)
+        val lastUpdateStr = lastUpdate.format(formatter)
+        
+        sb.append("---\n")
+        sb.append("creation_date: ").append(createdAtStr).append("\n")
+        sb.append("last_update: ").append(lastUpdateStr).append("\n")
+        if (isDone) sb.append("done: true\n")
+        dueDate?.let {
+            if (hasTime) {
+                sb.append("due_date: ").append(it.toString()).append("\n")
+            } else {
+                sb.append("due_date: ").append(it.toLocalDate().toString()).append("\n")
+            }
+        }
+        if (hasTime) sb.append("hastime: true\n")
+        
+        // Add any other existing YAML properties that weren't handled above
+        extraYaml.forEach { line ->
+            sb.append(line).append("\n")
+        }
+        sb.append("---\n\n")
+
+        // Always include title row, even if empty, with 1 empty line below
+        sb.append("# ").append(title).append("\n\n")
+        // Ensure the content ends with exactly one empty line
+        sb.append(textContent.trimEnd()).append("\n")
+        return sb.toString()
+    }
+
     companion object {
         private val filenameFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
 
@@ -145,39 +178,50 @@ data class Task(
                 duration = duration
             )
         }
-    }
 
-    fun toRaw(): String {
-        val sb = StringBuilder()
-        
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
-        val createdAtStr = createdAt.format(formatter)
-        val lastUpdateStr = lastUpdate.format(formatter)
-        
-        sb.append("---\n")
-        sb.append("creation_date: ").append(createdAtStr).append("\n")
-        sb.append("last_update: ").append(lastUpdateStr).append("\n")
-        if (isDone) sb.append("done: true\n")
-        dueDate?.let {
-            if (hasTime) {
-                sb.append("due_date: ").append(it.toString()).append("\n")
+        fun merge(base: Task, local: Task, remote: Task): Task {
+            // YAML from remote (filesystem) always wins
+            val mergedCreatedAt = remote.createdAt
+            val mergedLastUpdate = remote.lastUpdate
+            val mergedDueDate = remote.dueDate
+            val mergedHasTime = remote.hasTime
+            val mergedIsDone = remote.isDone
+            val mergedExtraYaml = remote.extraYaml
+
+            // Title merge
+            val mergedTitle = if (local.title == remote.title) {
+                local.title
+            } else if (local.title == base.title) {
+                remote.title
+            } else if (remote.title == base.title) {
+                local.title
             } else {
-                sb.append("due_date: ").append(it.toLocalDate().toString()).append("\n")
+                "CONFLICT: Local(${local.title}) vs Remote(${remote.title})"
             }
-        }
-        if (hasTime) sb.append("hastime: true\n")
-        
-        // Add any other existing YAML properties that weren't handled above
-        extraYaml.forEach { line ->
-            sb.append(line).append("\n")
-        }
-        sb.append("---\n\n")
 
-        // Always include title row, even if empty, with 1 empty line below
-        sb.append("# ").append(title).append("\n\n")
-        // Ensure the content ends with exactly one empty line
-        sb.append(textContent.trimEnd()).append("\n")
-        return sb.toString()
+            // Body merge
+            val mergedBody = if (local.textContent == remote.textContent) {
+                local.textContent
+            } else if (local.textContent == base.textContent) {
+                remote.textContent
+            } else if (remote.textContent == base.textContent) {
+                local.textContent
+            } else {
+                // Both changed to different things: Use markers as specified in AGENTS.md
+                "<<<<<<< External\n${remote.textContent}\n=======\n${local.textContent}\n>>>>>>> Local"
+            }
+
+            return remote.copy(
+                title = mergedTitle,
+                textContent = mergedBody,
+                createdAt = mergedCreatedAt,
+                lastUpdate = mergedLastUpdate,
+                dueDate = mergedDueDate,
+                hasTime = mergedHasTime,
+                isDone = mergedIsDone,
+                extraYaml = mergedExtraYaml
+            )
+        }
     }
 }
 

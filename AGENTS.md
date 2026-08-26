@@ -25,6 +25,7 @@
 - **Interaction & Feedback:**
   - When the user provides instructions on how to interact (meta-instructions), always add them to `AGENTS.md` to ensure they persist across sessions.
   - **Proactive Memory Management:** Automatically update `AGENTS.md` with meta-learnings, architectural rules, or interaction preferences at the end of a task. Do not wait for a reminder.
+  - **Strict Scope Control:** Do not modify `TODO.md`. This file is reserved for the user's manual tracking.
   - Address user questions directly and avoid treating questions about past actions as new tasks without answering them first.
   - **Strict Scope Control:** When given specific feedback on a single aspect of a UI component (e.g., alignment), do not modify other aspects (e.g., size) unless explicitly requested. Stay strictly within the scope of the instruction.
   - **Question vs Task Distinction (STRICT):** Never treat a question about how a feature works as a request to implement or change it. Always answer the question first. 
