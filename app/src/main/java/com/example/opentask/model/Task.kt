@@ -1,5 +1,6 @@
 package com.example.opentask.model
 
+import com.example.opentask.util.generateConflict
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -179,7 +180,7 @@ data class Task(
             )
         }
 
-        fun merge(base: Task, local: Task, remote: Task): Task {
+        fun merge(base: Task, local: Task, remote: Task): Task { // todo: simplify 3 -> 2
             // YAML from remote (filesystem) always wins
             val mergedCreatedAt = remote.createdAt
             val mergedLastUpdate = remote.lastUpdate
@@ -196,7 +197,7 @@ data class Task(
             } else if (remote.title == base.title) {
                 local.title
             } else {
-                "CONFLICT: Local(${local.title}) vs Remote(${remote.title})"
+                generateConflict(local.title, remote.title, separator = " ")
             }
 
             // Body merge
@@ -207,8 +208,7 @@ data class Task(
             } else if (remote.textContent == base.textContent) {
                 local.textContent
             } else {
-                // Both changed to different things: Use markers as specified in AGENTS.md
-                "<<<<<<< External\n${remote.textContent}\n=======\n${local.textContent}\n>>>>>>> Local"
+                generateConflict(local.textContent, remote.textContent, separator = "\n")
             }
 
             return remote.copy(
