@@ -146,4 +146,6 @@ This project should replace the usage of ColorNote
   - [ ] list trivial and non-trivial usecases
   - [ ] handle them one by one for title, yaml and content
   - [ ] on file viewer / editor while deleted on disk
-  - [ ] schedule updates to prevent batch (Obsidian save on every character)
+  - [ ] schedule updates to prevent batch
+    - Obsidian save on every character
+    - syncthing delete then create then update files

@@ -67,7 +67,7 @@ class FolderWatcherManager(
             currentWatchedUri = uri
             val documentId = DocumentsContract.getTreeDocumentId(uri)
             currentChildrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, documentId)
-            
+
             val file = getFileFromUriString(folderUriString)
 
             if (file != null) {
@@ -76,8 +76,10 @@ class FolderWatcherManager(
                 CoroutineScope(Dispatchers.Main).launch {
                     try {
                         for (event in channel) {
-                            debugManager.log("FolderWatcherManager", "WatchService Event: ${event.kind} -> ${event.file.name} (${event.file.absolutePath})")
-                            handleSingleFileEvent(uri, event)
+                            if (filenameRegex.matches(event.file.name)) {
+                                debugManager.log("FolderWatcherManager", "WatchService Event: ${event.kind} -> ${event.file.name} (${event.file.absolutePath})")
+                                handleSingleFileEvent(uri, event)
+                            }
                         }
                     } catch (e: Exception) {
                         debugManager.log("FolderWatcherManager", "WatchService channel error: ${e.message}")
@@ -94,10 +96,10 @@ class FolderWatcherManager(
         }
     }
 
+    private val filenameRegex = Regex("""\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md""")
+
     private fun handleSingleFileEvent(treeUri: Uri, event: KWatchEvent) {
         val name = event.file.name
-        if (!name.endsWith(".md")) return
-
         val childrenUri = currentChildrenUri ?: return
 
         try {
@@ -178,9 +180,9 @@ class FolderWatcherManager(
                         val lastModified = c.getLong(lastModIndex)
                         val docId = c.getString(idIndex)
                         
-                        newMetadata[name] = lastModified
+                        if (filenameRegex.matches(name)) {
+                            newMetadata[name] = lastModified
 
-                        if (name.endsWith(".md")) {
                             val cachedTask = taskCache[name]
                             if (cachedTask != null && fileMetadataMap[name] == lastModified) {
                                 loadedTasks.add(cachedTask)
@@ -192,19 +194,19 @@ class FolderWatcherManager(
                                     changedTasks.add(task)
                                 }
                             }
-                        }
 
-                        if (!fileMetadataMap.containsKey(name)) {
-                            if (showPush && fileMetadataMap.isNotEmpty()) {
-                                lastEventInfo = "Created: $name"
-                                debugManager.log("FolderWatcherManager", lastEventInfo)
-                                changeDetected = true
-                            }
-                        } else if (fileMetadataMap[name]!! != lastModified) {
-                            if (showPush) {
-                                lastEventInfo = if (fileMetadataMap[name]!! < lastModified) "Updated: $name" else "Externally Replaced: $name"
-                                debugManager.log("FolderWatcherManager", lastEventInfo)
-                                changeDetected = true
+                            if (!fileMetadataMap.containsKey(name)) {
+                                if (showPush && fileMetadataMap.isNotEmpty()) {
+                                    lastEventInfo = "Created: $name"
+                                    debugManager.log("FolderWatcherManager", lastEventInfo)
+                                    changeDetected = true
+                                }
+                            } else if (fileMetadataMap[name]!! != lastModified) {
+                                if (showPush) {
+                                    lastEventInfo = if (fileMetadataMap[name]!! < lastModified) "Updated: $name" else "Externally Replaced: $name"
+                                    debugManager.log("FolderWatcherManager", lastEventInfo)
+                                    changeDetected = true
+                                }
                             }
                         }
                     }
@@ -227,7 +229,7 @@ class FolderWatcherManager(
 
             val totalDuration = System.currentTimeMillis() - startTime
             val typePrefix = if (isInitialScan) "Initial exploration" else "Full scan"
-                debugManager.log("FolderWatcherManager", "$typePrefix: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
+            debugManager.log("FolderWatcherManager", "$typePrefix: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
 
             if (changeDetected || fileMetadataMap.isEmpty()) {
                 if (fileMetadataMap.isEmpty() && newMetadata.isEmpty()) {
