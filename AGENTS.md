@@ -41,7 +41,10 @@
   - **Empty Space Interaction:** In the editor, a tap on any empty space below the text should request focus and move the cursor to the end of the content.
   - **Visual Feedback:** Use `AppConfig.EditorFocusBorderColor` (typically orange) for active focus borders in editors.
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
-  - **Logging Control:** Use `AppConfig.logPeriodicScan` to toggle detailed filesystem scan logs in the `DebugPanel`. Initial scans are always logged for performance baseline monitoring.
+- **Filesystem File Watcher API**: Rely exclusively on Java's native coroutine-powered `WatchService` (`KWatchChannel`) for structural updates rather than scanning folders on a periodic loop.
+  - **Strict Filename Verification**: Only monitor, log, or scan files strictly matching the format `"yyyy-MM-dd_HH-mm-ss.md"`. Ignore all temporary or unrelated file paths at ingestion.
+  - **Asynchronous Event Debouncing**: Accumulate filesystem event triggers in a per-file stack queue and apply a 1-second debounce delay from the first cascading event. New intermediate events replace previous states, logging and calling actions only for the final resolved state after settlement.
+  - **Full Scan Monitoring**: Perform complete directory query operations only during the initial state exploration or fallback scenarios, logging full performance runtime metrics unconditionally.
 - **Model-Driven Parsing:** Move all data-specific parsing and reconstruction logic (like Obsidian file handling) into the relevant model classes (e.g., `Task`). The UI should remain agnostic to the storage format and only handle presentation states (like toggling between parsed/raw views).
   - **Note Editing Logic:** 
     - Parsed mode is the default.

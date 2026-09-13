@@ -30,6 +30,8 @@ class FolderWatcherManager(
     private var watchChannel: KWatchChannel? = null
     private var currentWatchedUri: Uri? = null
     private var currentChildrenUri: Uri? = null
+    private var pendingEventJobs = mutableMapOf<String, Job>()
+    private var pendingEventKinds = mutableMapOf<String, KWatchEventKind>()
 
     private fun getFileFromUriString(uriString: String?): File? {
         if (uriString == null) return null
@@ -77,8 +79,7 @@ class FolderWatcherManager(
                     try {
                         for (event in channel) {
                             if (filenameRegex.matches(event.file.name)) {
-                                debugManager.log("FolderWatcherManager", "WatchService Event: ${event.kind} -> ${event.file.name} (${event.file.absolutePath})")
-                                handleSingleFileEvent(uri, event)
+                                debounceFileEvent(uri, event)
                             }
                         }
                     } catch (e: Exception) {
@@ -97,6 +98,22 @@ class FolderWatcherManager(
     }
 
     private val filenameRegex = Regex("""\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md""")
+
+    private fun debounceFileEvent(treeUri: Uri, event: KWatchEvent) {
+        val name = event.file.name
+        pendingEventJobs[name]?.cancel()
+        pendingEventKinds[name] = event.kind
+
+        val job = CoroutineScope(Dispatchers.Main).launch {
+            delay(100)
+            val finalKind = pendingEventKinds.remove(name) ?: return@launch
+            pendingEventJobs.remove(name)
+            
+            debugManager.log("FolderWatcherManager", "WatchService Event: $finalKind -> ${event.file.name} (${event.file.absolutePath})")
+            handleSingleFileEvent(treeUri, event.copy(kind = finalKind))
+        }
+        pendingEventJobs[name] = job
+    }
 
     private fun handleSingleFileEvent(treeUri: Uri, event: KWatchEvent) {
         val name = event.file.name
@@ -285,6 +302,9 @@ class FolderWatcherManager(
     }
 
     fun stop() {
+        pendingEventJobs.values.forEach { it.cancel() }
+        pendingEventJobs.clear()
+        pendingEventKinds.clear()
         watchChannel?.close()
         watchChannel = null
         currentChildrenUri = null
