@@ -14,7 +14,6 @@ data class Task(
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val lastUpdate: LocalDateTime = LocalDateTime.now(),
     val dueDate: LocalDateTime? = null,
-    val hasTime: Boolean = false,
     val duration: TaskDuration? = null,
     val isDone: Boolean = false,
     val extraYaml: List<String> = emptyList()
@@ -31,13 +30,8 @@ data class Task(
         sb.append("last_update: ").append(lastUpdateStr).append("\n")
         if (isDone) sb.append("done: true\n")
         dueDate?.let {
-            if (hasTime) {
-                sb.append("due_date: ").append(it.toString()).append("\n")
-            } else {
-                sb.append("due_date: ").append(it.toLocalDate().toString()).append("\n")
-            }
+            sb.append("due_date: ").append(it.toLocalDate().toString()).append("\n")
         }
-        if (hasTime) sb.append("hastime: true\n")
         
         // Add any other existing YAML properties that weren't handled above
         extraYaml.forEach { line ->
@@ -56,11 +50,10 @@ data class Task(
         private val filenameFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
 
         private val MANAGED_KEYS = setOf(
-            "done", "completed",
-            "due", "deadline", "due_date",
-            "hastime",
-            "last_update", "updated",
-            "creation_date", "created"
+            "done",
+            "due_date",
+            "last_update",
+            "creation_date"
         )
 
         fun fromRaw(filename: String, rawContent: String): Task {
@@ -82,7 +75,6 @@ data class Task(
 
             var isDone = false
             var dueDate: LocalDateTime? = null
-            var hasTime = false
             var duration: TaskDuration? = null
 
             if (lines.isNotEmpty() && lines[0] == "---") {
@@ -97,20 +89,17 @@ data class Task(
                         if (key != null && key in MANAGED_KEYS) {
                             val value = parts[1].trim()
                             when (key) {
-                                "done", "completed" -> isDone = value.toBoolean()
-                                "due", "deadline", "due_date" -> {
+                                "done" -> isDone = value.toBoolean()
+                                "due_date" -> {
                                     try {
                                         dueDate = LocalDateTime.parse(value)
-                                        hasTime = true
                                     } catch (e: Exception) {
                                         try {
                                             dueDate = java.time.LocalDate.parse(value).atStartOfDay()
-                                            hasTime = false
                                         } catch (e2: Exception) {}
                                     }
                                 }
-                                "hastime" -> hasTime = value.toBoolean()
-                                "last_update", "updated" -> {
+                                "last_update" -> {
                                     try {
                                         lastUpdate = LocalDateTime.parse(value, filenameFormatter)
                                     } catch (e: Exception) {
@@ -119,7 +108,7 @@ data class Task(
                                         } catch (e2: Exception) {}
                                     }
                                 }
-                                "creation_date", "created" -> {
+                                "creation_date" -> {
                                     try {
                                         createdAt = LocalDateTime.parse(value, filenameFormatter)
                                     } catch (e: Exception) {
@@ -175,7 +164,6 @@ data class Task(
                 extraYaml = extraYaml,
                 isDone = isDone,
                 dueDate = dueDate,
-                hasTime = hasTime,
                 duration = duration
             )
         }
@@ -185,7 +173,6 @@ data class Task(
             val mergedCreatedAt = remote.createdAt
             val mergedLastUpdate = remote.lastUpdate
             val mergedDueDate = remote.dueDate
-            val mergedHasTime = remote.hasTime
             val mergedIsDone = remote.isDone
             val mergedExtraYaml = remote.extraYaml
 
@@ -217,7 +204,6 @@ data class Task(
                 createdAt = mergedCreatedAt,
                 lastUpdate = mergedLastUpdate,
                 dueDate = mergedDueDate,
-                hasTime = mergedHasTime,
                 isDone = mergedIsDone,
                 extraYaml = mergedExtraYaml
             )

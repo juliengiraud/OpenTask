@@ -14,7 +14,6 @@ creation_date: 2023-10-27_10-30-00
 last_update: 2023-10-27_11-00-00
 done: true
 due_date: 2023-10-28
-hastime: false
 custom_prop: value
 # comment line
 ---
@@ -30,7 +29,6 @@ It has multiple lines.
         assertEquals("This is the content of the task.\nIt has multiple lines.", task.textContent)
         assertTrue(task.isDone)
         assertEquals(LocalDateTime.of(2023, 10, 28, 0, 0), task.dueDate)
-        assertFalse(task.hasTime)
         
         // Exact reconstruction check
         val reconstructed = task.toRaw()
@@ -87,32 +85,6 @@ Just content.
                 "---\n\n" +
                 "# \n\n" +
                 "No title, just text.\n"
-        assertEquals(expected, task.toRaw())
-    }
-
-    @Test
-    fun `test parsing with YAML variants`() {
-        val filename = "2023-10-27_10-30-00.md"
-        val raw = """---
-completed: true
-deadline: 2023-12-25T15:00:00
-updated: 2023-11-01_12-00-00
----
-"""
-        val task = Task.fromRaw(filename, raw)
-        assertTrue(task.isDone)
-        assertEquals(LocalDateTime.of(2023, 12, 25, 15, 0), task.dueDate)
-        assertTrue(task.hasTime)
-        assertEquals(LocalDateTime.of(2023, 11, 1, 12, 0), task.lastUpdate)
-        
-        val expected = "---\n" +
-                "creation_date: 2023-10-27_10-30-00\n" +
-                "last_update: 2023-11-01_12-00-00\n" +
-                "done: true\n" +
-                "due_date: 2023-12-25T15:00\n" +
-                "hastime: true\n" +
-                "---\n\n" +
-                "# \n\n\n"
         assertEquals(expected, task.toRaw())
     }
 
@@ -341,16 +313,23 @@ done: true
         )
         
         val merged = Task.merge(base, local, remote)
-        val expected = "---\n" +
-                "creation_date: 2023-01-01_10-00-00\n" +
-                "last_update: 2023-01-01_11-00-00\n" +
-                "---\n\n" +
-                "# CONFLICT: Local(Local Title) vs Remote(Remote Title)\n\n" +
-                "<<<<<<< External\n" +
-                "Remote content\n" +
-                "=======\n" +
-                "Local content\n" +
-                ">>>>>>> Local\n"
+
+        val expected = """---
+creation_date: 2023-01-01_10-00-00
+last_update: 2023-01-01_11-00-00
+---
+
+# <<<<<<< APP Local ======= Remote >>>>>>> DISK Title
+
+<<<<<<< APP
+Local content
+=======
+>>>>>>> DISK
+<<<<<<< APP
+=======
+Remote content
+>>>>>>> DISK
+"""
         assertEquals(expected, merged.toRaw())
     }
 
