@@ -26,7 +26,6 @@ fun SettingsScreen(
     onSelectFolder: () -> Unit,
     onResetWatcher: () -> Unit,
     onToggleWeekNumber: (Boolean) -> Unit,
-    onToggleLogPeriodicScan: (Boolean) -> Unit,
     watchedFolder: String?,
     debugLogs: List<String>,
     modifier: Modifier = Modifier
@@ -70,21 +69,7 @@ fun SettingsScreen(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Debug Informations", style = MaterialTheme.typography.titleMedium)
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = "Log periodic scan", style = MaterialTheme.typography.bodyLarge)
-            Switch(
-                checked = AppConfig.logPeriodicScan,
-                onCheckedChange = onToggleLogPeriodicScan
-            )
-        }
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Logs section (part of the global scroll)
         Spacer(modifier = Modifier.height(16.dp))

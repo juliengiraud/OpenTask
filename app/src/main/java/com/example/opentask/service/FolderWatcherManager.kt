@@ -2,13 +2,10 @@ package com.example.opentask.service
 
 import android.content.Context
 import android.net.Uri
-import android.os.Handler
-import android.os.Looper
 import android.provider.DocumentsContract
 import androidx.core.net.toUri
 import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
-import com.example.opentask.ui.AppConfig
 import java.io.File
 import java.nio.file.*
 import java.time.Instant
@@ -71,12 +68,10 @@ class FolderWatcherManager(
             val documentId = DocumentsContract.getTreeDocumentId(uri)
             currentChildrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, documentId)
             
-            debugManager.log("FolderWatcherManager", "Monitoring: $uri")
-
             val file = getFileFromUriString(folderUriString)
+
             if (file != null) {
-                debugManager.log("FolderWatcherManager", "WatchService initiating for path: ${file.absolutePath}")
-                val channel = KWatchChannel(file, KWatchChannelMode.RECURSIVE, CoroutineScope(Dispatchers.IO + SupervisorJob()), debugManager)
+                val channel = KWatchChannel(file, KWatchChannelMode.SINGLE_DIRECTORY, CoroutineScope(Dispatchers.IO + SupervisorJob()), debugManager)
                 watchChannel = channel
                 CoroutineScope(Dispatchers.Main).launch {
                     try {
@@ -88,6 +83,7 @@ class FolderWatcherManager(
                         debugManager.log("FolderWatcherManager", "WatchService channel error: ${e.message}")
                     }
                 }
+                debugManager.log("FolderWatcherManager", "Watching: ${file.absolutePath}")
             } else {
                 debugManager.log("FolderWatcherManager", "WatchService could not resolve local path for URI: $folderUriString")
             }
@@ -230,10 +226,8 @@ class FolderWatcherManager(
             }
 
             val totalDuration = System.currentTimeMillis() - startTime
-            val typePrefix = if (isInitialScan) "Initial exploration" else "Periodic scan"
-            if (isInitialScan || AppConfig.logPeriodicScan) {
+            val typePrefix = if (isInitialScan) "Initial exploration" else "Full scan"
                 debugManager.log("FolderWatcherManager", "$typePrefix: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
-            }
 
             if (changeDetected || fileMetadataMap.isEmpty()) {
                 if (fileMetadataMap.isEmpty() && newMetadata.isEmpty()) {
