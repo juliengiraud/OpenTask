@@ -1,7 +1,6 @@
 package com.example.opentask.service
 
 import android.content.Context
-import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -10,9 +9,13 @@ import androidx.core.net.toUri
 import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
 import com.example.opentask.ui.AppConfig
+import java.io.File
+import java.nio.file.*
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 
 class FolderWatcherManager(
     private val context: Context,
@@ -27,7 +30,7 @@ class FolderWatcherManager(
 
     private var fileMetadataMap = mutableMapOf<String, Long>()
     private var taskCache = mutableMapOf<String, Task>()
-    private var folderContentObserver: ContentObserver? = null
+    private var watchChannel: KWatchChannel? = null
     private val pollingHandler = Handler(Looper.getMainLooper())
     private var currentWatchedUri: Uri? = null
     private var currentChildrenUri: Uri? = null
@@ -39,6 +42,26 @@ class FolderWatcherManager(
             }
             pollingHandler.postDelayed(this, 5000)
         }
+    }
+
+    private fun getFileFromUriString(uriString: String?): File? {
+        if (uriString == null) return null
+        try {
+            val uri = Uri.parse(uriString)
+            if (uri.scheme == "file") {
+                return uri.path?.let { File(it) }
+            }
+            if (uri.scheme == "content") {
+                val docId = DocumentsContract.getTreeDocumentId(uri)
+                if (docId != null && docId.startsWith("primary:")) {
+                    val relativePath = docId.substringAfter("primary:")
+                    return File("/storage/emulated/0", relativePath)
+                }
+            }
+        } catch (e: Exception) {
+            debugManager.log("FolderWatcherManager", "Error resolving file path: ${e.message}")
+        }
+        return null
     }
 
     fun setupWatcher(folderUriString: String?) {
@@ -60,14 +83,23 @@ class FolderWatcherManager(
             
             debugManager.log("FolderWatcherManager", "Monitoring: $uri")
 
-            val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-                override fun onChange(selfChange: Boolean, updatedUri: Uri?) {
-                    debugManager.log("FolderWatcherManager", "System event triggered scan")
-                    scanFolder(uri, showPush = true)
+            val file = getFileFromUriString(folderUriString)
+            if (file != null) {
+                debugManager.log("FolderWatcherManager", "WatchService initiating for path: ${file.absolutePath}")
+                val channel = KWatchChannel(file, KWatchChannelMode.RECURSIVE, CoroutineScope(Dispatchers.IO + SupervisorJob()), debugManager)
+                watchChannel = channel
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        for (event in channel) {
+                            debugManager.log("FolderWatcherManager", "WatchService Event: ${event.kind} -> ${event.file.name} (${event.file.absolutePath})")
+                        }
+                    } catch (e: Exception) {
+                        debugManager.log("FolderWatcherManager", "WatchService channel error: ${e.message}")
+                    }
                 }
+            } else {
+                debugManager.log("FolderWatcherManager", "WatchService could not resolve local path for URI: $folderUriString")
             }
-            context.contentResolver.registerContentObserver(uri, true, observer)
-            folderContentObserver = observer
 
             scanFolder(uri, showPush = false) // Initial state
             pollingHandler.postDelayed(pollRunnable, 5000)
@@ -207,8 +239,8 @@ class FolderWatcherManager(
 
     fun stop() {
         pollingHandler.removeCallbacks(pollRunnable)
-        folderContentObserver?.let { context.contentResolver.unregisterContentObserver(it) }
-        folderContentObserver = null
+        watchChannel?.close()
+        watchChannel = null
         currentChildrenUri = null
     }
 
@@ -218,5 +250,129 @@ class FolderWatcherManager(
             DocumentsContract.Document.COLUMN_LAST_MODIFIED,
             DocumentsContract.Document.COLUMN_DOCUMENT_ID
         )
+    }
+}
+
+enum class KWatchEventKind {
+    CREATED, MODIFIED, DELETED
+}
+
+data class KWatchEvent(
+    val file: File,
+    val kind: KWatchEventKind
+)
+
+enum class KWatchChannelMode {
+    SINGLE_FILE, SINGLE_DIRECTORY, RECURSIVE
+}
+
+class KWatchChannel(
+    val file: File,
+    val mode: KWatchChannelMode = KWatchChannelMode.RECURSIVE,
+    val scope: CoroutineScope = GlobalScope,
+    val debugManager: DebugManager,
+    private val channel: Channel<KWatchEvent> = Channel(),
+) : Channel<KWatchEvent> by channel {
+
+    private val watchService: WatchService = FileSystems.getDefault().newWatchService()
+    private val registeredKeys = mutableMapOf<WatchKey, Path>()
+    private var watchJob: Job? = null
+
+    init {
+        if (file.isDirectory) {
+            if (mode == KWatchChannelMode.RECURSIVE) {
+                registerRecursive(file.toPath())
+            } else {
+                registerDirectory(file.toPath())
+            }
+        } else {
+            file.parentFile?.toPath()?.let { registerDirectory(it) }
+        }
+
+        watchJob = scope.launch(Dispatchers.IO) {
+            try {
+                while (isActive) {
+                    val key = watchService.take() ?: break
+                    val dirPath = registeredKeys[key] ?: continue
+
+                    for (event in key.pollEvents()) {
+                        val kind = event.kind()
+                        if (kind == StandardWatchEventKinds.OVERFLOW) continue
+
+                        val context = event.context() as? Path ?: continue
+                        val resolvedPath = dirPath.resolve(context)
+                        val affectedFile = resolvedPath.toFile()
+
+                        if (mode == KWatchChannelMode.SINGLE_FILE && affectedFile.absolutePath != file.absolutePath) {
+                            continue
+                        }
+
+                        val watchEventKind = when (kind) {
+                            StandardWatchEventKinds.ENTRY_CREATE -> KWatchEventKind.CREATED
+                            StandardWatchEventKinds.ENTRY_MODIFY -> KWatchEventKind.MODIFIED
+                            StandardWatchEventKinds.ENTRY_DELETE -> KWatchEventKind.DELETED
+                            else -> continue
+                        }
+
+                        if (mode == KWatchChannelMode.RECURSIVE && watchEventKind == KWatchEventKind.CREATED && affectedFile.isDirectory) {
+                            registerRecursive(resolvedPath)
+                        }
+
+                        channel.send(KWatchEvent(affectedFile, watchEventKind))
+                    }
+
+                    if (!key.reset()) {
+                        registeredKeys.remove(key)
+                        if (registeredKeys.isEmpty()) break
+                    }
+                }
+            } catch (e: ClosedWatchServiceException) {
+                // Ignore
+                debugManager.log("FolderWatcherManager", "error 1")
+            } catch (e: Exception) {
+                // Ignore
+                debugManager.log("FolderWatcherManager", "error 2")
+            }
+        }
+    }
+
+    private fun registerDirectory(path: Path) {
+        try {
+            val key = path.register(
+                watchService,
+                StandardWatchEventKinds.ENTRY_CREATE,
+                StandardWatchEventKinds.ENTRY_MODIFY,
+                StandardWatchEventKinds.ENTRY_DELETE
+            )
+            registeredKeys[key] = path
+        } catch (e: Exception) {
+            // Ignore
+            debugManager.log("FolderWatcherManager", "error 3")
+        }
+    }
+
+    private fun registerRecursive(root: Path) {
+        try {
+            Files.walk(root).forEach { path ->
+                if (Files.isDirectory(path)) {
+                    registerDirectory(path)
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore
+            debugManager.log("FolderWatcherManager", "error 4")
+        }
+    }
+
+    override fun close(cause: Throwable?): Boolean {
+        watchJob?.cancel()
+        try {
+            watchService.close()
+        } catch (e: Exception) {
+            // Ignore
+            debugManager.log("FolderWatcherManager", "error 5")
+        }
+        registeredKeys.clear()
+        return channel.close(cause)
     }
 }
