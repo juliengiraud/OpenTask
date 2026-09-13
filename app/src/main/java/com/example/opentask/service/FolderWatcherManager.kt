@@ -31,18 +31,8 @@ class FolderWatcherManager(
     private var fileMetadataMap = mutableMapOf<String, Long>()
     private var taskCache = mutableMapOf<String, Task>()
     private var watchChannel: KWatchChannel? = null
-    private val pollingHandler = Handler(Looper.getMainLooper())
     private var currentWatchedUri: Uri? = null
     private var currentChildrenUri: Uri? = null
-
-    private val pollRunnable = object : Runnable {
-        override fun run() {
-            currentWatchedUri?.let {
-                scanFolder(it, showPush = true)
-            }
-            pollingHandler.postDelayed(this, 5000)
-        }
-    }
 
     private fun getFileFromUriString(uriString: String?): File? {
         if (uriString == null) return null
@@ -92,6 +82,7 @@ class FolderWatcherManager(
                     try {
                         for (event in channel) {
                             debugManager.log("FolderWatcherManager", "WatchService Event: ${event.kind} -> ${event.file.name} (${event.file.absolutePath})")
+                            handleSingleFileEvent(uri, event)
                         }
                     } catch (e: Exception) {
                         debugManager.log("FolderWatcherManager", "WatchService channel error: ${e.message}")
@@ -102,9 +93,69 @@ class FolderWatcherManager(
             }
 
             scanFolder(uri, showPush = false) // Initial state
-            pollingHandler.postDelayed(pollRunnable, 5000)
         } catch (e: Exception) {
             debugManager.log("FolderWatcherManager", "Setup Error: ${e.message}")
+        }
+    }
+
+    private fun handleSingleFileEvent(treeUri: Uri, event: KWatchEvent) {
+        val name = event.file.name
+        if (!name.endsWith(".md")) return
+
+        val childrenUri = currentChildrenUri ?: return
+
+        try {
+            if (event.kind == KWatchEventKind.DELETED) {
+                val removedTask = taskCache[name]
+                fileMetadataMap.remove(name)
+                taskCache.remove(name)
+
+                lastEventInfo = "Deleted: $name"
+                debugManager.log("FolderWatcherManager", lastEventInfo)
+
+                val updatedList = taskCache.values.toList()
+                TaskRepository.setTasks(updatedList)
+                onStatusChanged(if (removedTask != null) listOf(removedTask) else emptyList())
+                return
+            }
+
+            // For CREATED and MODIFIED, look up just this file via the provider using a filtered query or cursor scanning
+            val cursor = context.contentResolver.query(childrenUri, PROJECTION, null, null, null)
+            cursor?.use { c ->
+                val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val lastModIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                val idIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+
+                if (nameIndex != -1 && lastModIndex != -1 && idIndex != -1) {
+                    while (c.moveToNext()) {
+                        val currentName = c.getString(nameIndex) ?: continue
+                        if (currentName == name) {
+                            val lastModified = c.getLong(lastModIndex)
+                            val docId = c.getString(idIndex)
+
+                            val isNew = !fileMetadataMap.containsKey(name)
+                            val isChanged = fileMetadataMap[name] != lastModified
+
+                            if (isNew || isChanged) {
+                                fileMetadataMap[name] = lastModified
+                                val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                                loadTaskFromUri(fileUri, name, lastModified)?.let { task ->
+                                    taskCache[name] = task
+                                    lastEventInfo = if (isNew) "Created: $name" else "Updated: $name"
+                                    debugManager.log("FolderWatcherManager", lastEventInfo)
+
+                                    val updatedList = taskCache.values.toList()
+                                    TaskRepository.setTasks(updatedList)
+                                    onStatusChanged(listOf(task))
+                                }
+                            }
+                            return
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            debugManager.log("FolderWatcherManager", "Single File Event Error: ${e.message}")
         }
     }
 
@@ -238,7 +289,6 @@ class FolderWatcherManager(
     }
 
     fun stop() {
-        pollingHandler.removeCallbacks(pollRunnable)
         watchChannel?.close()
         watchChannel = null
         currentChildrenUri = null
