@@ -8,9 +8,6 @@ import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
 import java.io.File
 import java.nio.file.*
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 
@@ -22,10 +19,6 @@ class FolderWatcherManager(
     var lastEventInfo: String = "No changes yet"
         private set
 
-    val activeTasks: List<String>
-        get() = fileMetadataMap.keys.toList()
-
-    private var fileMetadataMap = mutableMapOf<String, Long>()
     private var taskCache = mutableMapOf<String, Task>()
     private var watchChannel: KWatchChannel? = null
     private var currentWatchedUri: Uri? = null
@@ -122,7 +115,6 @@ class FolderWatcherManager(
         try {
             if (event.kind == KWatchEventKind.DELETED) {
                 val removedTask = taskCache[name]
-                fileMetadataMap.remove(name)
                 taskCache.remove(name)
 
                 lastEventInfo = "Deleted: $name"
@@ -138,7 +130,7 @@ class FolderWatcherManager(
             val cursor = context.contentResolver.query(childrenUri, PROJECTION, null, null, null)
             cursor?.use { c ->
                 val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                val lastModIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED) // to remove?
+                val lastModIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED) // to use later
                 val idIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
 
                 if (nameIndex != -1 && lastModIndex != -1 && idIndex != -1) {
@@ -170,14 +162,10 @@ class FolderWatcherManager(
     private fun scanFolder(treeUri: Uri) {
         val childrenUri = currentChildrenUri ?: return
         val startTime = System.currentTimeMillis()
-        fileMetadataMap.clear()
         try {
             val cursor = context.contentResolver.query(childrenUri, PROJECTION, null, null, null)
             val queryDuration = System.currentTimeMillis() - startTime
-            val newMetadata = mutableMapOf<String, Long>()
-            var changeDetected = false
             val loadedTasks = mutableListOf<Task>()
-            val changedTasks = mutableListOf<Task>()
 
             cursor?.use { c ->
                 val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
@@ -189,59 +177,27 @@ class FolderWatcherManager(
                         val name = c.getString(nameIndex) ?: continue
                         val docId = c.getString(idIndex)
                         
-                        if (filenameRegex.matches(name)) {
-                            val cachedTask = taskCache[name]
-                            if (cachedTask != null) {
-                                loadedTasks.add(cachedTask)
-                            } else {
-                                val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                                loadTaskFromUri(fileUri, name)?.let { task ->
-                                    taskCache[name] = task
-                                    loadedTasks.add(task)
-                                    changedTasks.add(task)
-                                }
-                            }
-
-                            if (!fileMetadataMap.containsKey(name)) {
-                                if (fileMetadataMap.isNotEmpty()) {
-                                    lastEventInfo = "Created: $name"
-                                    debugManager.log("FolderWatcherManager", lastEventInfo)
-                                    changeDetected = true
-                                }
-                            } else {
-                                lastEventInfo = "Externally Replaced: $name"
-                                debugManager.log("FolderWatcherManager", lastEventInfo)
-                                changeDetected = true
+                        if (!filenameRegex.matches(name)) continue
+                        val cachedTask = taskCache[name]
+                        if (cachedTask != null) {
+                            loadedTasks.add(cachedTask)
+                        } else {
+                            val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                            loadTaskFromUri(fileUri, name)?.let { task ->
+                                taskCache[name] = task
+                                loadedTasks.add(task)
                             }
                         }
+
+                        debugManager.log("FolderWatcherManager", "Created: $name")
+
                     }
                 }
             }
 
-            // Detect Deletions
-            for (oldName in fileMetadataMap.keys) {
-                if (!newMetadata.containsKey(oldName)) {
-                    val removedTask = taskCache[oldName]
-                    if (removedTask != null) changedTasks.add(removedTask)
-                    taskCache.remove(oldName)
-                    lastEventInfo = "Deleted: $oldName"
-                    debugManager.log("FolderWatcherManager", lastEventInfo)
-                    changeDetected = true
-                }
-            }
-
             val totalDuration = System.currentTimeMillis() - startTime
-            debugManager.log("FolderWatcherManager", "Initial exploration: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
-
-            if (changeDetected || fileMetadataMap.isEmpty()) {
-                if (fileMetadataMap.isEmpty() && newMetadata.isEmpty()) {
-                    lastEventInfo = "Folder empty"
-                }
-                fileMetadataMap.clear()
-                fileMetadataMap.putAll(newMetadata)
-                TaskRepository.setTasks(loadedTasks)
-                onStatusChanged(if (fileMetadataMap.size == newMetadata.size && !changeDetected) loadedTasks else changedTasks)
-            }
+            debugManager.log("FolderWatcherManager", "Initial exploration: Found ${loadedTasks.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
+            TaskRepository.setTasks(loadedTasks)
 
         } catch (e: Exception) {
             debugManager.log("FolderWatcherManager", "Scan Error: ${e.message}")
@@ -267,14 +223,12 @@ class FolderWatcherManager(
     }
 
     fun removeFromCache(name: String) {
-        fileMetadataMap.remove(name)
         taskCache.remove(name)
     }
 
     fun reset() {
         debugManager.log("FolderWatcherManager", "Watcher reset.")
         setupWatcher(null)
-        fileMetadataMap.clear()
         taskCache.clear()
         lastEventInfo = "Watcher reset"
         onStatusChanged(emptyList())
