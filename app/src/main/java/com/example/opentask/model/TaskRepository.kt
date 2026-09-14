@@ -14,7 +14,7 @@ object TaskRepository {
     // Index for fast lookup by date (due_date if set, otherwise creation_date)
     private val _tasksByDate = mutableStateMapOf<java.time.LocalDate, SnapshotStateList<Task>>()
 
-    var onTaskSaved: ((String, Long, Task) -> Unit)? = null
+    var onTaskSaved: ((String, Task) -> Unit)? = null
     var onTaskDeleted: ((String, Task) -> Unit)? = null
 
     private fun rebuildIndex() {
@@ -121,7 +121,7 @@ object TaskRepository {
                 val action = if (isNewFile) "Created" else "Updated"
                 context.addDebugLog("File: $action ${task.filename}")
             }
-            onTaskSaved?.invoke(task.filename, f.lastModified(), task)
+            onTaskSaved?.invoke(task.filename, task)
         }
     }
 

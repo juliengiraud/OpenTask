@@ -138,31 +138,24 @@ class FolderWatcherManager(
             val cursor = context.contentResolver.query(childrenUri, PROJECTION, null, null, null)
             cursor?.use { c ->
                 val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                val lastModIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                val lastModIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED) // to remove?
                 val idIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
 
                 if (nameIndex != -1 && lastModIndex != -1 && idIndex != -1) {
                     while (c.moveToNext()) {
                         val currentName = c.getString(nameIndex) ?: continue
                         if (currentName == name) {
-                            val lastModified = c.getLong(lastModIndex)
                             val docId = c.getString(idIndex)
 
-                            val isNew = !fileMetadataMap.containsKey(name)
-                            val isChanged = fileMetadataMap[name] != lastModified
+                            val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                            loadTaskFromUri(fileUri, name)?.let { task ->
+                                taskCache[name] = task
+                                lastEventInfo = "Created: $name"
+                                debugManager.log("FolderWatcherManager", lastEventInfo)
 
-                            if (isNew || isChanged) {
-                                fileMetadataMap[name] = lastModified
-                                val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                                loadTaskFromUri(fileUri, name, lastModified)?.let { task ->
-                                    taskCache[name] = task
-                                    lastEventInfo = if (isNew) "Created: $name" else "Updated: $name"
-                                    debugManager.log("FolderWatcherManager", lastEventInfo)
-
-                                    val updatedList = taskCache.values.toList()
-                                    TaskRepository.setTasks(updatedList)
-                                    onStatusChanged(listOf(task))
-                                }
+                                val updatedList = taskCache.values.toList()
+                                TaskRepository.setTasks(updatedList)
+                                onStatusChanged(listOf(task))
                             }
                             return
                         }
@@ -194,18 +187,15 @@ class FolderWatcherManager(
                 if (nameIndex != -1 && lastModIndex != -1 && idIndex != -1) {
                     while (c.moveToNext()) {
                         val name = c.getString(nameIndex) ?: continue
-                        val lastModified = c.getLong(lastModIndex)
                         val docId = c.getString(idIndex)
                         
                         if (filenameRegex.matches(name)) {
-                            newMetadata[name] = lastModified
-
                             val cachedTask = taskCache[name]
-                            if (cachedTask != null && fileMetadataMap[name] == lastModified) {
+                            if (cachedTask != null) {
                                 loadedTasks.add(cachedTask)
                             } else {
                                 val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                                loadTaskFromUri(fileUri, name, lastModified)?.let { task ->
+                                loadTaskFromUri(fileUri, name)?.let { task ->
                                     taskCache[name] = task
                                     loadedTasks.add(task)
                                     changedTasks.add(task)
@@ -218,8 +208,8 @@ class FolderWatcherManager(
                                     debugManager.log("FolderWatcherManager", lastEventInfo)
                                     changeDetected = true
                                 }
-                            } else if (fileMetadataMap[name]!! != lastModified) {
-                                lastEventInfo = if (fileMetadataMap[name]!! < lastModified) "Updated: $name" else "Externally Replaced: $name"
+                            } else {
+                                lastEventInfo = "Externally Replaced: $name"
                                 debugManager.log("FolderWatcherManager", lastEventInfo)
                                 changeDetected = true
                             }
@@ -258,27 +248,21 @@ class FolderWatcherManager(
         }
     }
 
-    private fun loadTaskFromUri(uri: Uri, name: String, lastModified: Long): Task? {
+    private fun loadTaskFromUri(uri: Uri, name: String): Task? {
         return try {
             val content = context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 inputStream.bufferedReader().readText()
             } ?: return null
 
-            Task.fromRaw(name, content).copy(
-                lastUpdate = LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(lastModified),
-                    ZoneId.systemDefault()
-                )
-            )
+            Task.fromRaw(name, content)
         } catch (e: Exception) {
             debugManager.log("FolderWatcherManager", "Error reading $name: ${e.message}")
             null
         }
     }
 
-    fun updateCache(name: String, lastModified: Long, task: Task) {
+    fun updateCache(name: String, task: Task) {
         debugManager.log("FolderWatcherManager", "Cache synced for $name")
-        fileMetadataMap[name] = lastModified
         taskCache[name] = task
     }
 

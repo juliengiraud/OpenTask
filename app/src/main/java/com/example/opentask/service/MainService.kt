@@ -42,8 +42,8 @@ class MainService : Service() {
             }
         }
         
-        TaskRepository.onTaskSaved = { name, lastModified, task ->
-            folderWatcherManager.updateCache(name, lastModified, task)
+        TaskRepository.onTaskSaved = { name, task ->
+            folderWatcherManager.updateCache(name, task)
             if (task.dueDate?.toLocalDate() == java.time.LocalDate.now()) {
                 updateNotification()
             }
