@@ -177,7 +177,7 @@ class FolderWatcherManager(
     private fun scanFolder(treeUri: Uri) {
         val childrenUri = currentChildrenUri ?: return
         val startTime = System.currentTimeMillis()
-        val isInitialScan = fileMetadataMap.isEmpty()
+        fileMetadataMap.clear()
         try {
             val cursor = context.contentResolver.query(childrenUri, PROJECTION, null, null, null)
             val queryDuration = System.currentTimeMillis() - startTime
@@ -219,9 +219,9 @@ class FolderWatcherManager(
                                     changeDetected = true
                                 }
                             } else if (fileMetadataMap[name]!! != lastModified) {
-                                    lastEventInfo = if (fileMetadataMap[name]!! < lastModified) "Updated: $name" else "Externally Replaced: $name"
-                                    debugManager.log("FolderWatcherManager", lastEventInfo)
-                                    changeDetected = true
+                                lastEventInfo = if (fileMetadataMap[name]!! < lastModified) "Updated: $name" else "Externally Replaced: $name"
+                                debugManager.log("FolderWatcherManager", lastEventInfo)
+                                changeDetected = true
                             }
                         }
                     }
@@ -234,15 +234,14 @@ class FolderWatcherManager(
                     val removedTask = taskCache[oldName]
                     if (removedTask != null) changedTasks.add(removedTask)
                     taskCache.remove(oldName)
-                        lastEventInfo = "Deleted: $oldName"
-                        debugManager.log("FolderWatcherManager", lastEventInfo)
-                        changeDetected = true
+                    lastEventInfo = "Deleted: $oldName"
+                    debugManager.log("FolderWatcherManager", lastEventInfo)
+                    changeDetected = true
                 }
             }
 
             val totalDuration = System.currentTimeMillis() - startTime
-            val typePrefix = if (isInitialScan) "Initial exploration" else "Full scan"
-            debugManager.log("FolderWatcherManager", "$typePrefix: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
+            debugManager.log("FolderWatcherManager", "Initial exploration: Found ${newMetadata.size} files in ${totalDuration}ms (query: ${queryDuration}ms)")
 
             if (changeDetected || fileMetadataMap.isEmpty()) {
                 if (fileMetadataMap.isEmpty() && newMetadata.isEmpty()) {
