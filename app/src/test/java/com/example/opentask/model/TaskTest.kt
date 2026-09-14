@@ -26,7 +26,7 @@ It has multiple lines.
         val task = Task.fromRaw(filename, raw)
         
         assertEquals("My Test Title", task.title)
-        assertEquals("This is the content of the task.\nIt has multiple lines.", task.textContent)
+        assertEquals("This is the content of the task.\nIt has multiple lines.\n", task.textContent)
         assertTrue(task.isDone)
         assertEquals(LocalDateTime.of(2023, 10, 28, 0, 0), task.dueDate)
         
@@ -59,31 +59,36 @@ Just content.
 """
         val task = Task.fromRaw(filename, raw)
         assertEquals("Simple Title", task.title)
-        assertEquals("Just content.", task.textContent)
+        assertEquals("Just content.\n", task.textContent)
         assertEquals(LocalDateTime.of(2023, 10, 27, 10, 30), task.createdAt)
-        
-        val expected = "---\n" +
-                "creation_date: 2023-10-27_10-30-00\n" +
-                "last_update: 2023-10-27_10-30-00\n" +
-                "---\n\n" +
-                "# Simple Title\n\n" +
-                "Just content.\n"
+
+        val expected = """---
+creation_date: 2023-10-27_10-30-00
+last_update: 2023-10-27_10-30-00
+---
+
+# Simple Title
+
+Just content.
+"""
         assertEquals(expected, task.toRaw())
     }
 
     @Test
-    fun `test parsing content only`() {
+    fun `test parsing content without title marker uses first line as title`() {
         val filename = "2023-10-27_10-30-00.md"
-        val raw = "No title, just text."
+        val raw = "No title, just text.\n"
         val task = Task.fromRaw(filename, raw)
-        assertEquals("", task.title)
-        assertEquals("No title, just text.", task.textContent)
+        // Title should be inferred from the first non-empty line
+        assertEquals("No title, just text.", task.title)
+        assertEquals("No title, just text.\n", task.textContent)
         
+        // Reconstruction should now use the inferred title
         val expected = "---\n" +
                 "creation_date: 2023-10-27_10-30-00\n" +
                 "last_update: 2023-10-27_10-30-00\n" +
                 "---\n\n" +
-                "# \n\n" +
+                "# No title, just text.\n\n" +
                 "No title, just text.\n"
         assertEquals(expected, task.toRaw())
     }
@@ -97,7 +102,7 @@ Just content.
     }
 
     @Test
-    fun `test whitespace handling`() {
+    fun `test title trimming and body whitespace preservation`() {
         val filename = "2023-10-27_10-30-00.md"
         val raw = """---
 done: false
@@ -110,11 +115,12 @@ done: false
 Content with trailing spaces   
 """
         val task = Task.fromRaw(filename, raw)
+        // Title should be trimmed
         assertEquals("Title with spaces", task.title)
-        assertEquals("Content with trailing spaces", task.textContent)
+        // Body should preserve leading and trailing whitespace after the mandatory 1-line skip
+        assertEquals("\nContent with trailing spaces   \n", task.textContent)
         
         val reconstructed = task.toRaw()
-        // Should enforce standard spacing: 1 empty line after title, 1 at end
         val expected = """---
 creation_date: 2023-10-27_10-30-00
 last_update: 2023-10-27_10-30-00
@@ -122,7 +128,8 @@ last_update: 2023-10-27_10-30-00
 
 # Title with spaces
 
-Content with trailing spaces
+
+Content with trailing spaces   
 """
         assertEquals(expected, reconstructed)
     }
@@ -145,7 +152,7 @@ priority: high
                 "tags: [todo, urgent]\n" +
                 "priority: high\n" +
                 "---\n\n" +
-                "# Test\n\n\n"
+                "# Test\n\n"
         assertEquals(expected, reconstructed)
     }
 
@@ -163,7 +170,7 @@ description: "This is a test: with a colon"
                 "last_update: 2023-01-01_10-00-00\n" +
                 "description: \"This is a test: with a colon\"\n" +
                 "---\n\n" +
-                "# Title\n\n\n"
+                "# Title\n\n"
         assertEquals(expected, reconstructed)
     }
 
@@ -178,7 +185,7 @@ Content
 """
         val task = Task.fromRaw("2023-01-01_10-00-00.md", raw)
         assertEquals("Title 1", task.title)
-        assertEquals("# Title 2\n\nContent", task.textContent)
+        assertEquals("# Title 2\n\nContent\n", task.textContent)
         
         val expected = "---\n" +
                 "creation_date: 2023-01-01_10-00-00\n" +
@@ -194,6 +201,7 @@ Content
         val raw = """---
 ---
 # Title
+
 Content
 """
         val task = Task.fromRaw("2023-01-01_10-00-00.md", raw)
@@ -218,8 +226,10 @@ done: true
 # Title
 """
         // Should not treat as YAML because second delimiter is --
+        // Consequently, the first line "---" is treated as part of the body
+        // and becomes the inferred title.
         val task = Task.fromRaw("test.md", raw)
-        assertEquals("", task.title)
+        assertEquals("---", task.title)
         assertTrue(task.textContent.contains("done: true"))
     }
 
@@ -230,9 +240,9 @@ done: true
             createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
             lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
             title = "Base Title", 
-            textContent = "Base Content"
+            textContent = "Base Content\n"
         )
-        val local = base.copy(textContent = "Local Content")
+        val local = base.copy(textContent = "Local Content\n")
         val remote = base.copy()
         
         val merged = Task.merge(base, local, remote)
@@ -252,7 +262,7 @@ done: true
             createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
             lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
             title = "Base Title", 
-            textContent = "Base Content"
+            textContent = "Base Content\n"
         )
         val local = base.copy()
         val remote = base.copy(
@@ -277,12 +287,12 @@ done: true
             createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
             lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
             title = "Base", 
-            textContent = "Base"
+            textContent = "Base\n"
         )
-        val local = base.copy(title = "New", textContent = "New")
+        val local = base.copy(title = "New", textContent = "New\n")
         val remote = base.copy(
             title = "New", 
-            textContent = "New",
+            textContent = "New\n",
             lastUpdate = LocalDateTime.of(2023, 1, 1, 11, 0)
         )
         
@@ -303,12 +313,12 @@ done: true
             createdAt = LocalDateTime.of(2023, 1, 1, 10, 0),
             lastUpdate = LocalDateTime.of(2023, 1, 1, 10, 0),
             title = "Base", 
-            textContent = "Base content"
+            textContent = "Base content\n"
         )
-        val local = base.copy(title = "Local Title", textContent = "Local content")
+        val local = base.copy(title = "Local Title", textContent = "Local content\n")
         val remote = base.copy(
             title = "Remote Title", 
-            textContent = "Remote content",
+            textContent = "Remote content\n",
             lastUpdate = LocalDateTime.of(2023, 1, 1, 11, 0)
         )
         
@@ -323,9 +333,6 @@ last_update: 2023-01-01_11-00-00
 
 <<<<<<< APP
 Local content
-=======
->>>>>>> DISK
-<<<<<<< APP
 =======
 Remote content
 >>>>>>> DISK
@@ -354,7 +361,77 @@ Remote content
                 "last_update: 2023-01-01_11-00-00\n" +
                 "tags: [remote]\n" +
                 "---\n\n" +
-                "# \n\n\n"
+                "# \n\n"
         assertEquals(expected, merged.toRaw())
+    }
+
+    @Test
+    fun `test auto-title inference from body`() {
+        val filename = "2023-10-27_10-30-00.md"
+        val raw = """---
+done: false
+---
+
+# 
+
+   
+  First non-empty line  
+  Second line
+"""
+        val task = Task.fromRaw(filename, raw)
+        // Should ignore leading blank lines and trim the result
+        assertEquals("First non-empty line", task.title)
+        
+        val reconstructed = task.toRaw()
+        assertTrue(reconstructed.contains("# First non-empty line\n"))
+    }
+
+    @Test
+    fun `test parsing title without trailing blank line`() {
+        val filename = "2023-10-27_10-30-00.md"
+        // No empty line between title and content
+        val raw = """---
+done: false
+---
+# My Title
+Content starts here
+"""
+        val task = Task.fromRaw(filename, raw)
+        assertEquals("My Title", task.title)
+        assertEquals("Content starts here\n", task.textContent)
+
+        val reconstructed = task.toRaw()
+        // Reconstruction should fix the format by adding the missing blank line
+        val expected = """---
+creation_date: 2023-10-27_10-30-00
+last_update: 2023-10-27_10-30-00
+---
+
+# My Title
+
+Content starts here
+"""
+        assertEquals(expected, reconstructed)
+    }
+
+    @Test
+    fun `test trailing newline enforcement`() {
+        val filename = "2023-10-27_10-30-00.md"
+        
+        // Case 1: Body without trailing newline
+        val task1 = Task(filename = filename, title = "T", textContent = "Content")
+        val raw1 = task1.toRaw()
+        assertTrue(raw1.endsWith("Content\n"))
+        
+        // Case 2: Body with trailing spaces but no newline
+        val task2 = Task(filename = filename, title = "T", textContent = "Content  ")
+        val raw2 = task2.toRaw()
+        assertTrue(raw2.endsWith("Content  \n"))
+        
+        // Case 3: Body already ends with newline
+        val task3 = Task(filename = filename, title = "T", textContent = "Content\n")
+        val raw3 = task3.toRaw()
+        assertEquals("Content\n", raw3.takeLast(8))
+        assertFalse(raw3.endsWith("Content\n\n")) // Should not add extra newline
     }
 }

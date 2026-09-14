@@ -18,6 +18,17 @@ data class Task(
     val isDone: Boolean = false,
     val extraYaml: List<String> = emptyList()
 ) {
+    /**
+     * Converts the task to its raw Obsidian-compatible Markdown format.
+     *
+     * The format follows these spacing rules:
+     * 1. YAML frontmatter delimited by '---'.
+     * 2. Exactly one empty line after the YAML block.
+     * 3. A Markdown H1 title ('# Title'), always present even if empty.
+     * 4. Exactly one empty line after the title line.
+     * 5. The body content (textContent) follows.
+     * 6. Ensures the output ends with a newline if the content is not empty.
+     */
     fun toRaw(): String {
         val sb = StringBuilder()
         
@@ -39,10 +50,15 @@ data class Task(
         }
         sb.append("---\n\n")
 
-        // Always include title row, even if empty, with 1 empty line below
+        // Always include title row, even if empty, with exactly 1 empty line below
         sb.append("# ").append(title).append("\n\n")
-        // Ensure the content ends with exactly one empty line
-        sb.append(textContent.trimEnd()).append("\n")
+        sb.append(textContent)
+        
+        // Ensure trailing newline if not already present
+        if (sb.isNotEmpty() && sb.last() != '\n') {
+            sb.append('\n')
+        }
+        
         return sb.toString()
     }
 
@@ -56,6 +72,19 @@ data class Task(
             "creation_date"
         )
 
+        /**
+         * Parses a raw Markdown string into a Task object.
+         *
+         * Parsing logic:
+         * - Extracts creation date from the filename if possible.
+         * - Parses YAML frontmatter for managed fields (done, due_date, etc.).
+         * - Skips blank lines after YAML to find the H1 title ('# ').
+         * - The title is trimmed of leading/trailing whitespace.
+         * - The body starts two lines after the title line (skipping one mandatory separator line).
+         * - All whitespace within the body (including leading/trailing newlines) is preserved.
+         * - **Auto-Title:** If the title is empty after parsing, it is inferred from the first 
+         *   non-empty line of the body (textContent), trimmed of whitespace.
+         */
         fun fromRaw(filename: String, rawContent: String): Task {
             var createdAt = LocalDateTime.now()
             var lastUpdate = LocalDateTime.now()
@@ -130,7 +159,13 @@ data class Task(
                     
                     if (current < lines.size && lines[current].startsWith("# ")) {
                         title = lines[current].substring(2).trim()
-                        bodyStartLine = current + 1
+                        // If there is an empty line immediately after the title, skip it
+                        // to keep textContent clean for toRaw's mandatory spacing.
+                        bodyStartLine = if (current + 1 < lines.size && lines[current + 1].isBlank()) {
+                            current + 2
+                        } else {
+                            current + 1
+                        }
                     } else {
                         bodyStartLine = closingIndex + 2
                     }
@@ -142,17 +177,23 @@ data class Task(
                 }
                 if (current < lines.size && lines[current].startsWith("# ")) {
                     title = lines[current].substring(2).trim()
-                    bodyStartLine = current + 1
+                    // Handle cases with or without a blank line after the title
+                    bodyStartLine = if (current + 1 < lines.size && lines[current + 1].isBlank()) {
+                        current + 2
+                    } else {
+                        current + 1
+                    }
                 }
             }
 
-            // Skip leading empty lines in body
-            var actualBodyStart = bodyStartLine
-            while (actualBodyStart < lines.size && lines[actualBodyStart].isBlank()) {
-                actualBodyStart++
-            }
+            val body = lines.drop(bodyStartLine).joinToString("\n")
 
-            val body = lines.drop(actualBodyStart).joinToString("\n").trimEnd()
+            // If title is empty, use the first non-empty line from the body
+            if (title.isBlank()) {
+                title = body.lineSequence()
+                    .map { it.trim() }
+                    .firstOrNull { it.isNotEmpty() } ?: ""
+            }
 
             return Task(
                 id = filename,

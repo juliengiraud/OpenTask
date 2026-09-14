@@ -59,9 +59,10 @@
       - If only one side changed, the changes are auto-merged without markers.
       - **Titles use word-level diffing** (`MergeUtils.generateConflict` with `" "` separator) to minimize conflict markers and preserve unchanged words.
   - **Obsidian File Structure:**
-    - Raw format: YAML frontmatter -> 1 empty line -> `# Title` -> 1 empty line -> Inner Content -> at least 1 empty line at the bottom.
+    - Raw format: YAML frontmatter -> 1 empty line -> `# Title` -> 1 empty line -> Inner Content.
     - `Task.fromRaw` extracts the creation date strictly from the filename (`yyyy-MM-dd_HH-mm-ss.md`).
-    - `Task.toRaw` always enforces the standard spacing (1 empty line after YAML, 1 empty line after Title, and 1 empty line at the end of the file).
+    - `Task.toRaw` always enforces standard spacing: exactly 1 empty line after YAML and exactly 1 empty line after the `# Title` line. It also ensures the file ends with a trailing newline if content is present.
+    - **Whitespace Preservation:** Titles are trimmed of leading/trailing whitespace. Inner Content preserves whitespace found after the title line. If exactly one blank line exists immediately after the title, it is skipped (treated as a separator); otherwise, content begins immediately on the next line. `toRaw` will always re-normalize this to exactly one blank line.
     - **YAML Preservation:** When parsing YAML, only the properties managed by the app (done, due_date, last_update, creation_date) are extracted into `Task` fields. All other lines (comments, extra properties) are stored in `extraYaml` and preserved exactly in `toRaw`. This ensures a "perfect merge" where unmanaged data is left unchanged.
 - **DRY Principle:**
   - Centralize navigation and task creation logic in `MainActivity.companion`.
