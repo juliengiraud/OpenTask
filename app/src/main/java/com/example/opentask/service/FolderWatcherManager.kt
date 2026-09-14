@@ -91,7 +91,7 @@ class FolderWatcherManager(
                 debugManager.log("FolderWatcherManager", "WatchService could not resolve local path for URI: $folderUriString")
             }
 
-            scanFolder(uri, showPush = false) // Initial state
+            scanFolder(uri)
         } catch (e: Exception) {
             debugManager.log("FolderWatcherManager", "Setup Error: ${e.message}")
         }
@@ -174,7 +174,7 @@ class FolderWatcherManager(
         }
     }
 
-    private fun scanFolder(treeUri: Uri, showPush: Boolean) {
+    private fun scanFolder(treeUri: Uri) {
         val childrenUri = currentChildrenUri ?: return
         val startTime = System.currentTimeMillis()
         val isInitialScan = fileMetadataMap.isEmpty()
@@ -213,17 +213,15 @@ class FolderWatcherManager(
                             }
 
                             if (!fileMetadataMap.containsKey(name)) {
-                                if (showPush && fileMetadataMap.isNotEmpty()) {
+                                if (fileMetadataMap.isNotEmpty()) {
                                     lastEventInfo = "Created: $name"
                                     debugManager.log("FolderWatcherManager", lastEventInfo)
                                     changeDetected = true
                                 }
                             } else if (fileMetadataMap[name]!! != lastModified) {
-                                if (showPush) {
                                     lastEventInfo = if (fileMetadataMap[name]!! < lastModified) "Updated: $name" else "Externally Replaced: $name"
                                     debugManager.log("FolderWatcherManager", lastEventInfo)
                                     changeDetected = true
-                                }
                             }
                         }
                     }
@@ -236,11 +234,9 @@ class FolderWatcherManager(
                     val removedTask = taskCache[oldName]
                     if (removedTask != null) changedTasks.add(removedTask)
                     taskCache.remove(oldName)
-                    if (showPush) {
                         lastEventInfo = "Deleted: $oldName"
                         debugManager.log("FolderWatcherManager", lastEventInfo)
                         changeDetected = true
-                    }
                 }
             }
 
