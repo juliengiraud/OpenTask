@@ -2,9 +2,19 @@ package com.example.opentask.util
 
 import com.example.opentask.service.DebugManager
 import java.io.File
-import java.nio.file.*
-import kotlinx.coroutines.*
+import java.nio.file.ClosedWatchServiceException
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardWatchEventKinds
+import java.nio.file.WatchKey
+import java.nio.file.WatchService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 enum class KWatchEventKind {
     CREATED, MODIFIED, DELETED
@@ -22,7 +32,7 @@ enum class KWatchChannelMode {
 class KWatchChannel(
     val file: File,
     val mode: KWatchChannelMode = KWatchChannelMode.RECURSIVE,
-    val scope: CoroutineScope = GlobalScope,
+    val scope: CoroutineScope,
     val debugManager: DebugManager,
     private val channel: Channel<KWatchEvent> = Channel(),
 ) : Channel<KWatchEvent> by channel {

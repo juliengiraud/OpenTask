@@ -22,6 +22,9 @@
   - Avoid technical/boilerplate names like "Scaffold", "Shell", "Wrapper", or "Container" for structural UI components unless they are standard library names.
 - **Simplicity & Standard UI:** Keep the app as simple as possible. Prefer standard Android/Material 3 system behaviors and animations (like default ripples for clicks) over custom complex animations or custom selection indicators unless explicitly requested.
   - **Minimalist Implementation:** Always strive for the smallest, most efficient code possible. Avoid maintaining redundant state (like local copies of lists) or creating complex workarounds when a simple direct check on existing data (like a `due_date` field) is sufficient. Minimize interactions between components; do not call an update or notification method if the underlying data relevant to that component has not changed.
+- **Code Hygiene & Best Practices:**
+  - **Structured Concurrency (NO GlobalScope):** Do not use `GlobalScope` for launching coroutines or as a default constructor fallback value. Always require an explicit, properly lifecycle-managed `CoroutineScope` to prevent resource and memory leaks.
+  - **Explicit Imports (NO Star/Wildcard Imports):** Never use wildcard or star imports (`*`). Always list each import explicitly to maintain visibility, clean namespaces, and avoid declaration collisions.
 - **Interaction & Feedback:**
   - When the user provides instructions on how to interact (meta-instructions), always add them to `AGENTS.md` to ensure they persist across sessions.
   - **Proactive Memory Management:** Automatically update `AGENTS.md` with meta-learnings, architectural rules, or interaction preferences at the end of a task. Do not wait for a reminder.
