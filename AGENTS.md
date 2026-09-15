@@ -43,7 +43,7 @@
 - **Centralized Configuration:** Always use `AppConfig` for UI constants. Avoid hardcoded hex values, padding, or dimensions in UI components. If a new adjustment is needed, add it to `AppConfig` first.
 - **Filesystem File Watcher API**: Rely exclusively on Java's native coroutine-powered `WatchService` (`KWatchChannel`) for structural updates rather than scanning folders on a periodic loop.
   - **Strict Filename Verification**: Only monitor, log, or scan files strictly matching the format `"yyyy-MM-dd_HH-mm-ss.md"`. Ignore all temporary or unrelated file paths at ingestion.
-  - **Asynchronous Event Debouncing**: Accumulate filesystem event triggers in a per-file stack queue and apply a 1-second debounce delay from the first cascading event. New intermediate events replace previous states, logging and calling actions only for the final resolved state after settlement.
+  - **Asynchronous Event Debouncing**: Accumulate filesystem event triggers in a per-file stack queue and apply a 100ms debounce delay. New intermediate events for the same file replace previous states and reset the timer, logging and calling actions only for the final resolved state after settlement.
   - **Full Scan Monitoring**: Perform complete directory query operations only during the initial state exploration or fallback scenarios, logging full performance runtime metrics unconditionally.
 - **Model-Driven Parsing:** Move all data-specific parsing and reconstruction logic (like Obsidian file handling) into the relevant model classes (e.g., `Task`). The UI should remain agnostic to the storage format and only handle presentation states (like toggling between parsed/raw views).
   - **Note Editing Logic:** 
