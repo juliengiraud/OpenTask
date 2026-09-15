@@ -1,21 +1,23 @@
 package com.example.opentask.model
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
-import com.example.opentask.service.FileStorageManager
-import com.example.opentask.ui.MainActivity
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 object TaskRepository {
     private val _tasks = mutableStateListOf<Task>()
     val tasks: List<Task> get() = _tasks
     
     // Index for fast lookup by date (due_date if set, otherwise creation_date)
-    private val _tasksByDate = mutableStateMapOf<java.time.LocalDate, SnapshotStateList<Task>>()
+    private val _tasksByDate = mutableStateMapOf<LocalDate, SnapshotStateList<Task>>()
 
+    // In-memory mutation callback hooks to decouple filesystem saving from repository operations
+    var onTaskChangedInMemory: ((Task, isDeleted: Boolean, oldTask: Task?) -> Unit)? = null
+
+    // Kept temporary properties to avoid breaking MainService / UI listeners before Step 5 complete integration
     var onTaskSaved: ((String, Task) -> Unit)? = null
     var onTaskDeleted: ((String, Task) -> Unit)? = null
 
@@ -43,14 +45,10 @@ object TaskRepository {
         rebuildIndex()
     }
 
-    fun updateTask(context: Context, taskId: String, newRawContent: String) {
+    fun updateTask(taskId: String, newRawContent: String) {
         val index = _tasks.indexOfFirst { it.id == taskId }
-        
-        // Use taskId as filename for new tasks (since createEmptyTask uses it)
         val filename = if (index != -1) _tasks[index].filename else taskId
-        
-        // Use second-level precision for lastUpdate to match YAML format and avoid false external updates
-        val now = java.time.LocalDateTime.now().withNano(0)
+        val now = LocalDateTime.now().withNano(0)
         
         val newTask = Task.fromRaw(filename, newRawContent).copy(
             id = taskId,
@@ -62,87 +60,42 @@ object TaskRepository {
         if (index != -1) {
             val oldTask = _tasks[index]
             if (isEmpty) {
-                if (context is com.example.opentask.ui.MainActivity) {
-                    context.addDebugLog("Memory: Deleting empty task ${oldTask.filename}")
-                }
                 removeFromIndex(oldTask)
                 _tasks.removeAt(index)
-                deleteTaskFile(context, oldTask.filename)
+                onTaskChangedInMemory?.invoke(oldTask, true, oldTask)
                 onTaskDeleted?.invoke(oldTask.filename, oldTask)
             } else {
-                // Optimization: Don't save if content hasn't changed (including YAML properties)
                 if (oldTask.toRaw() == newRawContent) return
                 
-                if (context is com.example.opentask.ui.MainActivity) {
-                    context.addDebugLog("Memory: Updating task ${newTask.filename}")
-                }
                 removeFromIndex(oldTask)
                 _tasks[index] = newTask
                 addToIndex(newTask)
-                saveTaskToFile(context, newTask)
+                onTaskChangedInMemory?.invoke(newTask, false, oldTask)
+                onTaskSaved?.invoke(newTask.filename, newTask)
             }
         } else if (!isEmpty) {
-            // New task and not empty: add and save
-            if (context is com.example.opentask.ui.MainActivity) {
-                context.addDebugLog("Memory: Creating new task ${newTask.filename}")
-            }
             _tasks.add(0, newTask)
             addToIndex(newTask)
-            saveTaskToFile(context, newTask)
+            onTaskChangedInMemory?.invoke(newTask, false, null)
+            onTaskSaved?.invoke(newTask.filename, newTask)
         }
     }
 
-    fun deleteTask(context: Context, taskId: String) {
+    fun deleteTask(taskId: String) {
         val index = _tasks.indexOfFirst { it.id == taskId }
         if (index != -1) {
             val task = _tasks[index]
             removeFromIndex(task)
             _tasks.removeAt(index)
-            deleteTaskFile(context, task.filename)
+            onTaskChangedInMemory?.invoke(task, true, task)
             onTaskDeleted?.invoke(task.filename, task)
-        }
-    }
-
-    private fun saveTaskToFile(context: Context, task: Task) {
-        val folderUriString = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-            .getString("watched_folder", null) ?: return
-        val folderUri = folderUriString.toUri()
-        
-        val isNewFile = !DocumentFile.fromTreeUri(context, folderUri)?.findFile(task.filename).let { it != null && it.exists() }
-        
-        val success = FileStorageManager.saveFileContent(
-            context,
-            folderUri,
-            task.filename,
-            task.toRaw()
-        )
-        
-        if (success && context is MainActivity) {
-            val action = if (isNewFile) "Created" else "Updated"
-            context.addDebugLog("File: $action ${task.filename}")
-        }
-        if (success) {
-            onTaskSaved?.invoke(task.filename, task)
-        }
-    }
-
-    private fun deleteTaskFile(context: Context, filename: String) {
-        val folderUriString = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-            .getString("watched_folder", null) ?: return
-        val folderUri = folderUriString.toUri()
-        
-        val success = FileStorageManager.deleteFile(context, folderUri, filename)
-        if (success && context is com.example.opentask.ui.MainActivity) {
-            context.addDebugLog("File: Deleted $filename")
         }
     }
 
     fun getTaskTitles(): List<String> = _tasks.map { it.title }
 
     fun getTodaysTaskTitles(): List<String> {
-        val today = java.time.LocalDate.now()
-        // Use the index for fast lookup.
-        // If a task has no due_date, it is indexed by its creation date.
+        val today = LocalDate.now()
         return _tasksByDate[today]
             ?.filter { !it.isDone && it.title.isNotBlank() }
             ?.map { it.title }
@@ -150,18 +103,18 @@ object TaskRepository {
     }
 
     fun getTodaysTasks(): List<Task> {
-        return getTasksForDate(java.time.LocalDate.now())
+        return getTasksForDate(LocalDate.now())
     }
 
-    fun getTasksForDate(date: java.time.LocalDate): List<Task> {
+    fun getTasksForDate(date: LocalDate): List<Task> {
         return _tasksByDate[date]
             ?.filter { !it.isDone }
             ?: emptyList()
     }
 
-    fun createEmptyTask(dueDate: java.time.LocalDateTime? = null): Task {
-        val now = java.time.LocalDateTime.now()
-        val dateStr = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
+    fun createEmptyTask(dueDate: LocalDateTime? = null): Task {
+        val now = LocalDateTime.now()
+        val dateStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
         val filename = "$dateStr.md"
         
         return Task(

@@ -278,7 +278,7 @@ fun OpenTaskApp(
             onEditModeChange = { activity.isEditMode = it },
             onSave = { newContent ->
                 val currentId = activity.selectedTask?.id ?: return@NoteDetailScreen
-                TaskRepository.updateTask(activity, currentId, newContent)
+                TaskRepository.updateTask(currentId, newContent)
                 
                 // Refresh selected task from repo or exit if deleted
                 val updatedTask = TaskRepository.tasks.find { it.id == currentId }
