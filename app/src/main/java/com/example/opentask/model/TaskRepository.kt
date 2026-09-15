@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.example.opentask.service.FileStorageManager
+import com.example.opentask.ui.MainActivity
 
 object TaskRepository {
     private val _tasks = mutableStateListOf<Task>()
@@ -105,22 +107,21 @@ object TaskRepository {
         val folderUriString = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
             .getString("watched_folder", null) ?: return
         val folderUri = folderUriString.toUri()
-        val rootFolder = DocumentFile.fromTreeUri(context, folderUri) ?: return
         
-        var file = rootFolder.findFile(task.filename)
-        val isNewFile = file == null
-        if (file == null) {
-            file = rootFolder.createFile("text/markdown", task.filename)
+        val isNewFile = !DocumentFile.fromTreeUri(context, folderUri)?.findFile(task.filename).let { it != null && it.exists() }
+        
+        val success = FileStorageManager.saveFileContent(
+            context,
+            folderUri,
+            task.filename,
+            task.toRaw()
+        )
+        
+        if (success && context is MainActivity) {
+            val action = if (isNewFile) "Created" else "Updated"
+            context.addDebugLog("File: $action ${task.filename}")
         }
-        
-        file?.let { f ->
-            context.contentResolver.openOutputStream(f.uri, "wt")?.use { output ->
-                output.write(task.toRaw().toByteArray())
-            }
-            if (context is com.example.opentask.ui.MainActivity) {
-                val action = if (isNewFile) "Created" else "Updated"
-                context.addDebugLog("File: $action ${task.filename}")
-            }
+        if (success) {
             onTaskSaved?.invoke(task.filename, task)
         }
     }
@@ -129,10 +130,9 @@ object TaskRepository {
         val folderUriString = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
             .getString("watched_folder", null) ?: return
         val folderUri = folderUriString.toUri()
-        val rootFolder = DocumentFile.fromTreeUri(context, folderUri) ?: return
         
-        rootFolder.findFile(filename)?.delete()
-        if (context is com.example.opentask.ui.MainActivity) {
+        val success = FileStorageManager.deleteFile(context, folderUri, filename)
+        if (success && context is com.example.opentask.ui.MainActivity) {
             context.addDebugLog("File: Deleted $filename")
         }
     }
