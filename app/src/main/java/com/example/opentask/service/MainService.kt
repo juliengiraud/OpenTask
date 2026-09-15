@@ -10,6 +10,7 @@ import androidx.core.net.toUri
 import android.provider.DocumentsContract
 import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
+import com.example.opentask.util.KWatchEventKind
 import java.time.LocalDate
 
 class MainService : Service() {
