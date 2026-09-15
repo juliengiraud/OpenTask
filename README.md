@@ -27,7 +27,16 @@ Development still in progress for MVP, here is the overview of the minimal featu
 
 ## Data flow
 
-WIP: right now the data flow is quite messy, here is what it should be
+WIP:
+
+- [x] Initial exploration
+- [x] Internal changes handling
+- [/] External changes handling
+  - [ ] note screen not updated by external changes, need debugging
+
+### Initial exploration
+
+Select folder, read & parse files to notes, fill up repository, setup watcher
 
 ```mermaid
 sequenceDiagram
@@ -36,8 +45,6 @@ sequenceDiagram
     participant Repo as NotesRepository
     participant Watcher as FolderWatcher
     participant FS as Obsidian Folder
-
-    Note over U,FS: 1. Select folder, initialize repository & setup watcher
 
     U->>App: Select Obsidian folder
     App->>FS: List folder files
@@ -50,18 +57,19 @@ sequenceDiagram
         App->>Repo: Add to repository
     end
     App->>Watcher: Starts watching folder
+```
 
-    Note over U,FS: 2. External changes detected
+### Internal changes handling
 
-    FS-->>Watcher: Event (created/updated/deleted file)
-    Watcher->>App: Notify change
-    App->>FS: Re-read affected file(s)
-    FS-->>App: Updated content
-    App->>App: Parse content
-    App->>Repo: Update corresponding note
-    Repo-->>U: UI updated (observed via Flow/LiveData)
+Create/modify from the app, update internal state and external files
 
-    Note over U,FS: 3. Create/modify from the app
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant App as Application
+    participant Repo as NotesRepository
+    participant Watcher as FolderWatcher
+    participant FS as Obsidian Folder
 
     U->>App: Create or modify a note
     App->>Repo: Update repository
@@ -69,4 +77,25 @@ sequenceDiagram
     App->>FS: Write corresponding file
     App->>Watcher: Re-enable watching on corresponding file
     Note right of Watcher: Prevents an infinite loop<br/>triggered by our own write
+```
+
+### External changes handling
+
+Create/modify from Obsidian, update internal state, handle conflicts
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant App as Application
+    participant Repo as NotesRepository
+    participant Watcher as FolderWatcher
+    participant FS as Obsidian Folder
+
+    FS-->>Watcher: Event (created/updated/deleted file)
+    Watcher->>App: Notify change
+    App->>FS: Re-read affected file(s)
+    FS-->>App: Updated content
+    App->>App: Parse content
+    App->>Repo: Update corresponding note
+    Repo-->>U: UI updated
 ```
