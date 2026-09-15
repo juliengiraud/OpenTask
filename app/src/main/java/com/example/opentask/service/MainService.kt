@@ -38,7 +38,7 @@ class MainService : Service() {
         notificationManager = AppNotificationManager(this)
 
         // Scenario 2: External Changes detected from the FolderWatcher
-        folderWatcherManager = FolderWatcherManager(this, debugManager) { filename, kind ->
+        folderWatcherManager = FolderWatcherManager(debugManager) { filename, kind ->
             handleExternalFileEvent(filename, kind)
         }
         
