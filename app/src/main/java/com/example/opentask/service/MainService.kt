@@ -21,6 +21,8 @@ class MainService : Service() {
     private lateinit var debugManager: DebugManager
     private lateinit var fileStorageManager: FileStorageManager
 
+    private var isSyncing = false
+
     private val filenameRegex = Regex("""\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md""")
 
     private val dateChangeReceiver = object : BroadcastReceiver() {
@@ -47,26 +49,28 @@ class MainService : Service() {
         
         // Scenario 3: Create/modify from the app
         TaskRepository.onTaskChangedInMemory = { task, isDeleted, oldTask ->
-            val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
-                .getString("watched_folder", null)
-            
-            if (folderUriString != null) {
-                val folderUri = folderUriString.toUri()
+            if (!isSyncing) {
+                val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
+                    .getString("watched_folder", null)
                 
-                // 1. Pause watching on corresponding file to avoid infinite self-trigger loops
-                folderWatcherManager.pauseWatching(task.filename)
-                
-                try {
-                    if (isDeleted) {
-                        debugManager.log("MainService", "File Action: Deleting file ${task.filename}")
-                        fileStorageManager.deleteFile(folderUri, task.filename)
-                    } else {
-                        debugManager.log("MainService", "File Action: Writing file ${task.filename}")
-                        fileStorageManager.saveFileContent(folderUri, task.filename, task.toRaw())
+                if (folderUriString != null) {
+                    val folderUri = folderUriString.toUri()
+                    
+                    // 1. Pause watching on corresponding file to avoid infinite self-trigger loops
+                    folderWatcherManager.pauseWatching(task.filename)
+                    
+                    try {
+                        if (isDeleted) {
+                            debugManager.log("MainService", "File Action: Deleting file ${task.filename}")
+                            fileStorageManager.deleteFile(folderUri, task.filename)
+                        } else {
+                            debugManager.log("MainService", "File Action: Writing file ${task.filename}")
+                            fileStorageManager.saveFileContent(folderUri, task.filename, task.toRaw())
+                        }
+                    } finally {
+                        // 2. Re-enable watching on corresponding file once I/O finishes
+                        folderWatcherManager.resumeWatching(task.filename)
                     }
-                } finally {
-                    // 2. Re-enable watching on corresponding file once I/O finishes
-                    folderWatcherManager.resumeWatching(task.filename)
                 }
             }
 
@@ -201,10 +205,10 @@ class MainService : Service() {
         val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
             .getString("watched_folder", null) ?: return
 
+        isSyncing = true
         try {
             if (kind == KWatchEventKind.DELETED) {
                 if (TaskRepository.delete(filename)) {
-                    updateNotification()
                     debugManager.log("MainService", "External Change: Deleted note $filename from memory")
                 }
                 return
@@ -215,22 +219,14 @@ class MainService : Service() {
             val content = file.getContent()
             if (content != null) {
                 val externalTask = Task.fromRaw(filename, content)
-                val existingList = TaskRepository.tasks.toMutableList()
-                val targetIndex = existingList.indexOfFirst { it.filename == filename }
-
-                if (targetIndex != -1) {
-                    // Merge or update with filesystem precision
-                    existingList[targetIndex] = externalTask
-                } else {
-                    existingList.add(0, externalTask)
+                if (TaskRepository.upsert(externalTask)) {
+                    debugManager.log("MainService", "External Change: Synchronized note $filename with memory")
                 }
-
-                TaskRepository.setTasks(existingList)
-                updateNotification()
-                debugManager.log("MainService", "External Change: Synchronized note $filename with memory")
             }
         } catch (e: Exception) {
             debugManager.log("MainService", "External sync error: ${e.message}")
+        } finally {
+            isSyncing = false
         }
     }
 

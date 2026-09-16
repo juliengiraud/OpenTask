@@ -109,6 +109,25 @@ object TaskRepository {
         return false
     }
 
+    fun upsert(newTask: Task): Boolean {
+        val index = _tasks.indexOfFirst { it.filename == newTask.filename }
+        if (index != -1) {
+            val oldTask = _tasks[index]
+            if (oldTask.toRaw() == newTask.toRaw()) return false
+
+            removeFromIndex(oldTask)
+            _tasks[index] = newTask
+            addToIndex(newTask)
+            onTaskChangedInMemory?.invoke(newTask, false, oldTask)
+            return true
+        } else {
+            _tasks.add(0, newTask)
+            addToIndex(newTask)
+            onTaskChangedInMemory?.invoke(newTask, false, null)
+            return true
+        }
+    }
+
     fun getTaskTitles(): List<String> = _tasks.map { it.title }
 
     fun getTodaysTaskTitles(): List<String> {
