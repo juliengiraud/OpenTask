@@ -92,6 +92,23 @@ object TaskRepository {
         }
     }
 
+    fun exists(filename: String): Boolean {
+        return _tasks.any { it.filename == filename }
+    }
+
+    fun delete(filename: String): Boolean {
+        val index = _tasks.indexOfFirst { it.filename == filename }
+        if (index != -1) {
+            val task = _tasks[index]
+            removeFromIndex(task)
+            _tasks.removeAt(index)
+            onTaskChangedInMemory?.invoke(task, true, task)
+            onTaskDeleted?.invoke(task.filename, task)
+            return true
+        }
+        return false
+    }
+
     fun getTaskTitles(): List<String> = _tasks.map { it.title }
 
     fun getTodaysTaskTitles(): List<String> {

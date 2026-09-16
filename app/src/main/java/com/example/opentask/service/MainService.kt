@@ -197,12 +197,7 @@ class MainService : Service() {
 
         try {
             if (kind == KWatchEventKind.DELETED) {
-                // Fine-grained repository external update
-                val existingList = TaskRepository.tasks.toMutableList()
-                val targetIndex = existingList.indexOfFirst { it.filename == filename }
-                if (targetIndex != -1) {
-                    existingList.removeAt(targetIndex)
-                    TaskRepository.setTasks(existingList)
+                if (TaskRepository.delete(filename)) {
                     updateNotification()
                     debugManager.log("MainService", "External Change: Deleted note $filename from memory")
                 }
