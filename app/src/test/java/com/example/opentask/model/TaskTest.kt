@@ -104,21 +104,21 @@ Just content.
     }
 
     @Test
-    fun `test title trimming and body whitespace preservation`() {
+    fun `test title and body whitespace preservation`() {
         val filename = "2023-10-27_10-30-00.md"
         val raw = """---
 done: false
 ---
 
 
-# Title with spaces  
+#  Title with spaces  
 
 
 Content with trailing spaces   
 """
         val task = Task.fromRaw(filename, raw)
         // Title should be trimmed
-        assertEquals("Title with spaces", task.title)
+        assertEquals(" Title with spaces  ", task.title)
         // Body should preserve leading and trailing whitespace after the mandatory 1-line skip
         assertEquals("\nContent with trailing spaces   \n", task.textContent)
         
@@ -128,7 +128,7 @@ creation_date: 2023-10-27_10-30-00
 last_update: 2023-10-27_10-30-00
 ---
 
-# Title with spaces
+#  Title with spaces  
 
 
 Content with trailing spaces   
@@ -382,10 +382,10 @@ done: false
 """
         val task = Task.fromRaw(filename, raw)
         // Should ignore leading blank lines and trim the result
-        assertEquals("First non-empty line", task.title)
+        assertEquals("  First non-empty line  ", task.title)
         
         val reconstructed = task.toRaw()
-        assertTrue(reconstructed.contains("# First non-empty line\n"))
+        assertTrue(reconstructed.contains("#   First non-empty line  \n"))
     }
 
     @Test
@@ -414,26 +414,5 @@ last_update: 2023-10-27_10-30-00
 Content starts here
 """
         assertEquals(expected, reconstructed)
-    }
-
-    @Test
-    fun `test trailing newline enforcement`() {
-        val filename = "2023-10-27_10-30-00.md"
-        
-        // Case 1: Body without trailing newline
-        val task1 = Task(filename = filename, title = "T", textContent = "Content")
-        val raw1 = task1.toRaw()
-        assertTrue(raw1.endsWith("Content\n"))
-        
-        // Case 2: Body with trailing spaces but no newline
-        val task2 = Task(filename = filename, title = "T", textContent = "Content  ")
-        val raw2 = task2.toRaw()
-        assertTrue(raw2.endsWith("Content  \n"))
-        
-        // Case 3: Body already ends with newline
-        val task3 = Task(filename = filename, title = "T", textContent = "Content\n")
-        val raw3 = task3.toRaw()
-        assertEquals("Content\n", raw3.takeLast(8))
-        assertFalse(raw3.endsWith("Content\n\n")) // Should not add extra newline
     }
 }

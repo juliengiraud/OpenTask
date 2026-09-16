@@ -99,3 +99,7 @@ sequenceDiagram
     App->>Repo: Update corresponding note
     Repo-->>U: UI updated
 ```
+
+## Notes
+
+- we must save the raw content of the files in the database in order to perform a diff after a FileWatcher trigger

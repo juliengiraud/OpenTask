@@ -14,7 +14,6 @@ data class Task(
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val lastUpdate: LocalDateTime = LocalDateTime.now(),
     val dueDate: LocalDateTime? = null,
-    val duration: TaskDuration? = null,
     val isDone: Boolean = false,
     val extraYaml: List<String> = emptyList()
 ) {
@@ -54,11 +53,6 @@ data class Task(
         sb.append("# ").append(title).append("\n\n")
         sb.append(textContent)
         
-        // Ensure trailing newline if not already present
-        if (sb.isNotEmpty() && sb.last() != '\n') {
-            sb.append('\n')
-        }
-        
         return sb.toString()
     }
 
@@ -79,11 +73,11 @@ data class Task(
          * - Extracts creation date from the filename if possible.
          * - Parses YAML frontmatter for managed fields (done, due_date, etc.).
          * - Skips blank lines after YAML to find the H1 title ('# ').
-         * - The title is trimmed of leading/trailing whitespace.
-         * - The body starts two lines after the title line (skipping one mandatory separator line).
-         * - All whitespace within the body (including leading/trailing newlines) is preserved.
-         * - **Auto-Title:** If the title is empty after parsing, it is inferred from the first 
-         *   non-empty line of the body (textContent), trimmed of whitespace.
+         * - The body starts two lines after the title line (skipping one mandatory separator line)
+             except if the trimmed line bellow the title is not empty.
+         * - All whitespace within the body and the title are preserved.
+         * - **Auto-Title:** If the title is empty after parsing, it is inferred from the first
+         *   non-empty line of the body (textContent).
          */
         fun fromRaw(filename: String, rawContent: String): Task {
             var createdAt = LocalDateTime.now()
@@ -104,7 +98,6 @@ data class Task(
 
             var isDone = false
             var dueDate: LocalDateTime? = null
-            var duration: TaskDuration? = null
 
             if (lines.isNotEmpty() && lines[0] == "---") {
                 val closingIndex = lines.drop(1).indexOf("---")
@@ -158,7 +151,7 @@ data class Task(
                     }
                     
                     if (current < lines.size && lines[current].startsWith("# ")) {
-                        title = lines[current].substring(2).trim()
+                        title = lines[current].substring(2)
                         // If there is an empty line immediately after the title, skip it
                         // to keep textContent clean for toRaw's mandatory spacing.
                         bodyStartLine = if (current + 1 < lines.size && lines[current + 1].isBlank()) {
@@ -176,7 +169,7 @@ data class Task(
                     current++
                 }
                 if (current < lines.size && lines[current].startsWith("# ")) {
-                    title = lines[current].substring(2).trim()
+                    title = lines[current].substring(2)
                     // Handle cases with or without a blank line after the title
                     bodyStartLine = if (current + 1 < lines.size && lines[current + 1].isBlank()) {
                         current + 2
@@ -190,9 +183,7 @@ data class Task(
 
             // If title is empty, use the first non-empty line from the body
             if (title.isBlank()) {
-                title = body.lineSequence()
-                    .map { it.trim() }
-                    .firstOrNull { it.isNotEmpty() } ?: ""
+                title = body.lineSequence().firstOrNull { it.trim().isNotEmpty() } ?: ""
             }
 
             return Task(
@@ -204,8 +195,7 @@ data class Task(
                 lastUpdate = lastUpdate,
                 extraYaml = extraYaml,
                 isDone = isDone,
-                dueDate = dueDate,
-                duration = duration
+                dueDate = dueDate
             )
         }
 
@@ -251,9 +241,3 @@ data class Task(
         }
     }
 }
-
-data class TaskDuration(
-    val days: Int = 0,
-    val hours: Int = 0,
-    val minutes: Int = 0
-)

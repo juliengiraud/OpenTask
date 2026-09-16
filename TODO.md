@@ -149,3 +149,5 @@ This project should replace the usage of ColorNote
   - [x] schedule updates to prevent batch
     - Obsidian save on every character
     - syncthing delete then create then update files
+- [ ] check if we can use files metadata title and maybe even description for fast loading
+
