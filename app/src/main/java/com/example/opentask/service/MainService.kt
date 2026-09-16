@@ -159,6 +159,13 @@ class MainService : Service() {
         return files
     }
 
+    private fun getFile(folderUriString: String, filename: String): DocFile {
+        val treeUri = folderUriString.toUri()
+        val treeId = DocumentsContract.getTreeDocumentId(treeUri)
+        val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, "$treeId/$filename")
+        return DocFile(filename, fileUri)
+    }
+
     // Scenario 1: Select folder, list files, and initialize repository
     private fun scanAndLoadFolder(folderUriString: String?) {
         if (folderUriString == null) return
@@ -193,7 +200,6 @@ class MainService : Service() {
     private fun handleExternalFileEvent(filename: String, kind: KWatchEventKind) {
         val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
             .getString("watched_folder", null) ?: return
-        val treeUri = folderUriString.toUri()
 
         try {
             if (kind == KWatchEventKind.DELETED) {
@@ -205,46 +211,23 @@ class MainService : Service() {
             }
 
             // For CREATED and MODIFIED, find and re-read the file
-            val documentId = DocumentsContract.getTreeDocumentId(treeUri)
-            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
-            val projection = arrayOf(
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID
-            )
+            val file = getFile(folderUriString, filename)
+            val content = file.getContent()
+            if (content != null) {
+                val externalTask = Task.fromRaw(filename, content)
+                val existingList = TaskRepository.tasks.toMutableList()
+                val targetIndex = existingList.indexOfFirst { it.filename == filename }
 
-            val cursor = contentResolver.query(childrenUri, projection, null, null, null)
-            cursor?.use { c ->
-                val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                val idIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-
-                if (nameIndex != -1 && idIndex != -1) {
-                    while (c.moveToNext()) {
-                        val currentName = c.getString(nameIndex) ?: continue
-                        if (currentName == filename) {
-                            val docId = c.getString(idIndex)
-                            val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                            val file = DocFile(currentName, fileUri)
-                            val content = file.getContent()
-                            if (content != null) {
-                                val externalTask = Task.fromRaw(filename, content)
-                                val existingList = TaskRepository.tasks.toMutableList()
-                                val targetIndex = existingList.indexOfFirst { it.filename == filename }
-                                
-                                if (targetIndex != -1) {
-                                    // Merge or update with filesystem precision
-                                    existingList[targetIndex] = externalTask
-                                } else {
-                                    existingList.add(0, externalTask)
-                                }
-                                
-                                TaskRepository.setTasks(existingList)
-                                updateNotification()
-                                debugManager.log("MainService", "External Change: Synchronized note $filename with memory")
-                            }
-                            return
-                        }
-                    }
+                if (targetIndex != -1) {
+                    // Merge or update with filesystem precision
+                    existingList[targetIndex] = externalTask
+                } else {
+                    existingList.add(0, externalTask)
                 }
+
+                TaskRepository.setTasks(existingList)
+                updateNotification()
+                debugManager.log("MainService", "External Change: Synchronized note $filename with memory")
             }
         } catch (e: Exception) {
             debugManager.log("MainService", "External sync error: ${e.message}")
