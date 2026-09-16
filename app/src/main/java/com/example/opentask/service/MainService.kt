@@ -21,8 +21,6 @@ class MainService : Service() {
     private lateinit var debugManager: DebugManager
     private lateinit var fileStorageManager: FileStorageManager
 
-    private var isSyncing = false
-
     private val filenameRegex = Regex("""\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md""")
 
     private val dateChangeReceiver = object : BroadcastReceiver() {
@@ -42,35 +40,32 @@ class MainService : Service() {
         notificationManager = AppNotificationManager(this)
         fileStorageManager = FileStorageManager(this)
 
-        // Scenario 2: External Changes detected from the FolderWatcher
-        folderWatcherManager = FolderWatcherManager(debugManager) { filename, kind ->
-            handleExternalFileEvent(filename, kind)
-        }
-        
         // Scenario 3: Create/modify from the app
         TaskRepository.onTaskChangedInMemory = { task, isDeleted, oldTask ->
-            if (!isSyncing) {
-                val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
-                    .getString("watched_folder", null)
+            val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
+                .getString("watched_folder", null)
+            
+            // If the watcher is already pausing this file, it means the change is coming from the filesystem.
+            // We skip the redundant write to disk.
+            val isExternalSync = ::folderWatcherManager.isInitialized && folderWatcherManager.isPaused(task.filename)
+
+            if (folderUriString != null && !isExternalSync) {
+                val folderUri = folderUriString.toUri()
                 
-                if (folderUriString != null) {
-                    val folderUri = folderUriString.toUri()
-                    
-                    // 1. Pause watching on corresponding file to avoid infinite self-trigger loops
-                    folderWatcherManager.pauseWatching(task.filename)
-                    
-                    try {
-                        if (isDeleted) {
-                            debugManager.log("MainService", "File Action: Deleting file ${task.filename}")
-                            fileStorageManager.deleteFile(folderUri, task.filename)
-                        } else {
-                            debugManager.log("MainService", "File Action: Writing file ${task.filename}")
-                            fileStorageManager.saveFileContent(folderUri, task.filename, task.toRaw())
-                        }
-                    } finally {
-                        // 2. Re-enable watching on corresponding file once I/O finishes
-                        folderWatcherManager.resumeWatching(task.filename)
+                // 1. Pause watching on corresponding file to avoid infinite self-trigger loops
+                folderWatcherManager.pauseWatching(task.filename)
+                
+                try {
+                    if (isDeleted) {
+                        debugManager.log("MainService", "File Action: Deleting file ${task.filename}")
+                        fileStorageManager.deleteFile(folderUri, task.filename)
+                    } else {
+                        debugManager.log("MainService", "File Action: Writing file ${task.filename}")
+                        fileStorageManager.saveFileContent(folderUri, task.filename, task.toRaw())
                     }
+                } finally {
+                    // 2. Re-enable watching on corresponding file once I/O finishes
+                    folderWatcherManager.resumeWatching(task.filename)
                 }
             }
 
@@ -79,6 +74,11 @@ class MainService : Service() {
                 task.createdAt.toLocalDate() == today || oldTask?.createdAt?.toLocalDate() == today) {
                 updateNotification()
             }
+        }
+
+        // Scenario 2: External Changes detected from the FolderWatcher
+        folderWatcherManager = FolderWatcherManager(debugManager) { filename, kind ->
+            handleExternalFileEvent(filename, kind)
         }
 
         val filter = IntentFilter().apply {
@@ -205,7 +205,8 @@ class MainService : Service() {
         val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
             .getString("watched_folder", null) ?: return
 
-        isSyncing = true
+        // Signal to the repository listener that this is an external sync
+        folderWatcherManager.pauseWatching(filename)
         try {
             if (kind == KWatchEventKind.DELETED) {
                 if (TaskRepository.delete(filename)) {
@@ -226,7 +227,7 @@ class MainService : Service() {
         } catch (e: Exception) {
             debugManager.log("MainService", "External sync error: ${e.message}")
         } finally {
-            isSyncing = false
+            folderWatcherManager.resumeWatching(filename)
         }
     }
 

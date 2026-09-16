@@ -35,6 +35,10 @@ class FolderWatcherManager(
         pausedFiles.remove(filename)
     }
 
+    fun isPaused(filename: String): Boolean {
+        return pausedFiles.contains(filename)
+    }
+
     private fun getFileFromUriString(uriString: String): File? {
         try {
             val uri = uriString.toUri()
