@@ -150,4 +150,5 @@ This project should replace the usage of ColorNote
     - Obsidian save on every character
     - syncthing delete then create then update files
 - [ ] check if we can use files metadata title and maybe even description for fast loading
+- [ ] rework events handled by NoteRepository to simplify MainService with IO interractions
 

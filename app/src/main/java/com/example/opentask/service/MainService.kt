@@ -109,10 +109,7 @@ class MainService : Service() {
                 folderWatcherManager.setupWatcher(folderUri)
                 scanAndLoadFolder(folderUri)
                 
-                startForeground(
-                    notificationManager.getForegroundId(),
-                    notificationManager.getForegroundNotification(TaskRepository.getTodaysTaskTitles()),
-                )
+                notificationManager.start(this, TaskRepository.getTodaysTaskTitles())
             }
         }
         return START_STICKY

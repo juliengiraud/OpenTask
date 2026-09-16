@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.text.SpannableString
@@ -17,9 +18,15 @@ class AppNotificationManager(private val context: Context) {
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
     private val channelId = "task_channel_v7"
     private val foregroundId = 1
+    private var taskNames: List<String> = emptyList()
 
     init {
         createNotificationChannel()
+    }
+
+    fun start(service: Service, initialTaskNames: List<String>) {
+        this.taskNames = initialTaskNames
+        service.startForeground(foregroundId, getForegroundNotification())
     }
 
     private fun createNotificationChannel() {
@@ -35,7 +42,7 @@ class AppNotificationManager(private val context: Context) {
         notificationManager.createNotificationChannel(channel)
     }
 
-    fun getForegroundNotification(taskNames: List<String>): Notification {
+    private fun getForegroundNotification(): Notification {
         val popupIntent = Intent(context, PopupActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
@@ -69,8 +76,10 @@ class AppNotificationManager(private val context: Context) {
             .build()
     }
 
-    fun updateForegroundNotification(taskNames: List<String>) {
-        notificationManager.notify(foregroundId, getForegroundNotification(taskNames))
+    fun updateForegroundNotification(newTaskNames: List<String>) {
+        if (this.taskNames == newTaskNames) return
+        this.taskNames = newTaskNames
+        notificationManager.notify(foregroundId, getForegroundNotification())
     }
 
     fun showPushNotification(title: String, text: String) {
@@ -83,6 +92,4 @@ class AppNotificationManager(private val context: Context) {
             .build()
         notificationManager.notify(text.hashCode(), pushNotification)
     }
-
-    fun getForegroundId() = foregroundId
 }
