@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.IBinder
 import androidx.core.net.toUri
 import android.provider.DocumentsContract
@@ -18,6 +19,7 @@ class MainService : Service() {
     private lateinit var folderWatcherManager: FolderWatcherManager
     private lateinit var notificationManager: AppNotificationManager
     private lateinit var debugManager: DebugManager
+    private lateinit var fileStorageManager: FileStorageManager
 
     private val filenameRegex = Regex("""\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md""")
 
@@ -36,6 +38,7 @@ class MainService : Service() {
         super.onCreate()
         debugManager = DebugManager(this)
         notificationManager = AppNotificationManager(this)
+        fileStorageManager = FileStorageManager(this)
 
         // Scenario 2: External Changes detected from the FolderWatcher
         folderWatcherManager = FolderWatcherManager(debugManager) { filename, kind ->
@@ -56,10 +59,10 @@ class MainService : Service() {
                 try {
                     if (isDeleted) {
                         debugManager.log("MainService", "File Action: Deleting file ${task.filename}")
-                        FileStorageManager.deleteFile(this, folderUri, task.filename)
+                        fileStorageManager.deleteFile(folderUri, task.filename)
                     } else {
                         debugManager.log("MainService", "File Action: Writing file ${task.filename}")
-                        FileStorageManager.saveFileContent(this, folderUri, task.filename, task.toRaw())
+                        fileStorageManager.saveFileContent(folderUri, task.filename, task.toRaw())
                     }
                 } finally {
                     // 2. Re-enable watching on corresponding file once I/O finishes
@@ -118,41 +121,63 @@ class MainService : Service() {
         TaskRepository.onTaskChangedInMemory = null
     }
 
+    inner class DocFile(val name: String, val uri: Uri) {
+        fun getContent(): String? = fileStorageManager.readFileContent(uri)
+    }
+
+    private fun listFiles(folderUriString: String, nameRegex: Regex? = null, updatedAfter: Long? = null): List<DocFile> {
+        val treeUri = folderUriString.toUri()
+        val documentId = DocumentsContract.getTreeDocumentId(treeUri)
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
+
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID
+        )
+
+        val files = mutableListOf<DocFile>()
+
+        val cursor = contentResolver.query(childrenUri, projection, null, null, null)
+        cursor?.use { c ->
+            val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            val idIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+
+            if (nameIndex != -1 && idIndex != -1) {
+                while (c.moveToNext()) {
+                    val name = c.getString(nameIndex) ?: continue
+
+                    if (nameRegex != null && !nameRegex.matches(name)) continue
+                    // todo: implement updatedAfter check using DocumentsContract.Document.COLUMN_LAST_MODIFIED
+
+                    val docId = c.getString(idIndex)
+                    val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                    files.add(DocFile(name, fileUri))
+                }
+            }
+        }
+
+        return files
+    }
+
     // Scenario 1: Select folder, list files, and initialize repository
     private fun scanAndLoadFolder(folderUriString: String?) {
         if (folderUriString == null) return
         val startTime = System.currentTimeMillis()
+        // todo run batches to read files in another thread?
+        // => tmp notes with only filename
+        // => add fs last updated
+        // => put notes in database, add columns to duplicate properties from raw_content
+        // 100 is good size for repo/ui commit
+        // handle ui for loading states
+        // todo? static loading time to allow some smart content load first
         try {
-            val treeUri = folderUriString.toUri()
-            val documentId = DocumentsContract.getTreeDocumentId(treeUri)
-            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
-
-            val projection = arrayOf(
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID
-            )
-
-            val cursor = contentResolver.query(childrenUri, projection, null, null, null)
+            val files = listFiles(folderUriString, filenameRegex)
             val queryDuration = System.currentTimeMillis() - startTime
+
             val loadedTasks = mutableListOf<Task>()
-
-            cursor?.use { c ->
-                val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                val idIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-
-                if (nameIndex != -1 && idIndex != -1) {
-                    while (c.moveToNext()) {
-                        val name = c.getString(nameIndex) ?: continue
-                        val docId = c.getString(idIndex)
-                        
-                        if (!filenameRegex.matches(name)) continue
-                        
-                        val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                        val fileContent = FileStorageManager.readFileContent(this, fileUri)
-                        if (fileContent != null) {
-                            loadedTasks.add(Task.fromRaw(name, fileContent))
-                        }
-                    }
+            for (file in files) {
+                file.getContent()?.let { content ->
+                    loadedTasks.add(Task.fromRaw(file.name, content))
                 }
             }
 
@@ -203,8 +228,8 @@ class MainService : Service() {
                         if (currentName == filename) {
                             val docId = c.getString(idIndex)
                             val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                            val content = FileStorageManager.readFileContent(this, fileUri)
-                            
+                            val file = DocFile(currentName, fileUri)
+                            val content = file.getContent()
                             if (content != null) {
                                 val externalTask = Task.fromRaw(filename, content)
                                 val existingList = TaskRepository.tasks.toMutableList()

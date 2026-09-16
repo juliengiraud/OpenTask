@@ -4,9 +4,9 @@ import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 
-object FileStorageManager {
+class FileStorageManager(private val context: Context) { // todo: rename AND add listdir and other fs utils
 
-    fun readFileContent(context: Context, fileUri: Uri): String? {
+    fun readFileContent(fileUri: Uri): String? {
         return try {
             context.contentResolver.openInputStream(fileUri)?.use { inputStream ->
                 inputStream.bufferedReader().readText()
@@ -16,7 +16,7 @@ object FileStorageManager {
         }
     }
 
-    fun saveFileContent(context: Context, folderUri: Uri, filename: String, content: String): Boolean {
+    fun saveFileContent(folderUri: Uri, filename: String, content: String): Boolean {
         return try {
             val rootFolder = DocumentFile.fromTreeUri(context, folderUri) ?: return false
             var file = rootFolder.findFile(filename)
@@ -35,7 +35,7 @@ object FileStorageManager {
         }
     }
 
-    fun deleteFile(context: Context, folderUri: Uri, filename: String): Boolean {
+    fun deleteFile(folderUri: Uri, filename: String): Boolean {
         return try {
             val rootFolder = DocumentFile.fromTreeUri(context, folderUri) ?: return false
             val file = rootFolder.findFile(filename)
