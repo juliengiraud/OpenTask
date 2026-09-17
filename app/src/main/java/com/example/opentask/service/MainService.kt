@@ -12,6 +12,12 @@ import android.provider.DocumentsContract
 import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
 import com.example.opentask.util.KWatchEventKind
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 class MainService : Service() {
@@ -20,6 +26,7 @@ class MainService : Service() {
     private lateinit var notificationManager: AppNotificationManager
     private lateinit var debugManager: DebugManager
     private lateinit var fileStorageManager: FileStorageManager
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val filenameRegex = Regex("""\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md""")
 
@@ -93,8 +100,10 @@ class MainService : Service() {
         when (intent?.action) {
             ACTION_UPDATE_WATCHED_FOLDER -> {
                 val newFolderUri = intent.getStringExtra(EXTRA_FOLDER_URI)
-                folderWatcherManager.setupWatcher(newFolderUri)
-                scanAndLoadFolder(newFolderUri)
+                serviceScope.launch {
+                    folderWatcherManager.setupWatcher(newFolderUri)
+                    scanAndLoadFolderInternal(newFolderUri)
+                }
             }
             ACTION_RESET_WATCHER -> {
                 folderWatcherManager.reset()
@@ -102,10 +111,14 @@ class MainService : Service() {
                 updateNotification()
             }
             else -> {
-                folderWatcherManager.setupWatcher(folderUri)
-                scanAndLoadFolder(folderUri)
-                
-                notificationManager.start(this, TaskRepository.getTodaysTaskTitles())
+                serviceScope.launch {
+                    folderWatcherManager.setupWatcher(folderUri)
+                    scanAndLoadFolderInternal(folderUri)
+                    
+                    withContext(Dispatchers.Main) {
+                        notificationManager.start(this@MainService, TaskRepository.getTodaysTaskTitles())
+                    }
+                }
             }
         }
         return START_STICKY
@@ -113,6 +126,7 @@ class MainService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.cancel()
         unregisterReceiver(dateChangeReceiver)
         folderWatcherManager.stop()
         TaskRepository.onTaskChangedInMemory = null
@@ -164,7 +178,7 @@ class MainService : Service() {
     }
 
     // Scenario 1: Select folder, list files, and initialize repository
-    private fun scanAndLoadFolder(folderUriString: String?) {
+    private suspend fun scanAndLoadFolderInternal(folderUriString: String?) {
         if (folderUriString == null) return
         val startTime = System.currentTimeMillis()
         // todo run batches to read files in another thread?
@@ -186,11 +200,16 @@ class MainService : Service() {
             }
 
             val totalDuration = System.currentTimeMillis() - startTime
-            debugManager.log("MainService", "Folder scan initialized: Loaded ${loadedTasks.size} notes in ${totalDuration}ms (query: ${queryDuration}ms)")
-            TaskRepository.setTasks(loadedTasks)
-            updateNotification()
+            
+            withContext(Dispatchers.Main) {
+                debugManager.log("MainService", "Folder scan complete: Loaded ${loadedTasks.size} notes in ${totalDuration}ms (query: ${queryDuration}ms)")
+                TaskRepository.setTasks(loadedTasks)
+                updateNotification()
+            }
         } catch (e: Exception) {
-            debugManager.log("MainService", "Scanning failed: ${e.message}")
+            withContext(Dispatchers.Main) {
+                debugManager.log("MainService", "Scanning failed: ${e.message}")
+            }
         }
     }
 
