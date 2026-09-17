@@ -27,12 +27,12 @@ object TaskRepository {
     }
 
     private fun addToIndex(task: Task) {
-        val date = task.dueDate?.toLocalDate() ?: task.createdAt.toLocalDate()
+        val date = task.dueDate?.toLocalDate() ?: return
         _tasksByDate.getOrPut(date) { mutableStateListOf() }.add(task)
     }
 
     private fun removeFromIndex(task: Task) {
-        val date = task.dueDate?.toLocalDate() ?: task.createdAt.toLocalDate()
+        val date = task.dueDate?.toLocalDate() ?: return
         _tasksByDate[date]?.removeIf { it.id == task.id }
         if (_tasksByDate[date]?.isEmpty() == true) {
             _tasksByDate.remove(date)
