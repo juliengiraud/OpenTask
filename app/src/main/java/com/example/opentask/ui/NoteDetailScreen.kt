@@ -238,7 +238,10 @@ fun NoteDetailScreen(
                     modifier = Modifier
                         .clickable(enabled = isParsedMode || isEditMode) {
                             if (isEditMode) {
-                                handleSave(textFieldValue.text)
+                                val isDirty = titleValue != initialTask.title || textFieldValue.text != initialTask.textContent
+                                if (isDirty) {
+                                    handleSave(textFieldValue.text)
+                                }
                             }
                             onEditModeChange(!isEditMode)
                         }

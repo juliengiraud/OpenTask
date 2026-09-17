@@ -65,8 +65,6 @@ object TaskRepository {
                 onTaskChangedInMemory?.invoke(oldTask, true, oldTask)
                 onTaskDeleted?.invoke(oldTask.filename, oldTask)
             } else {
-                if (oldTask.toRaw() == newRawContent) return
-                
                 removeFromIndex(oldTask)
                 _tasks[index] = newTask
                 addToIndex(newTask)
@@ -113,13 +111,17 @@ object TaskRepository {
         val index = _tasks.indexOfFirst { it.filename == newTask.filename }
         if (index != -1) {
             val oldTask = _tasks[index]
-            if (oldTask.toRaw() == newTask.toRaw()) return false
 
             removeFromIndex(oldTask)
             _tasks[index] = newTask
             addToIndex(newTask)
-            onTaskChangedInMemory?.invoke(newTask, false, oldTask)
-            return true
+
+            if (oldTask.toRaw() != newTask.toRaw()) {
+                onTaskChangedInMemory?.invoke(newTask, false, oldTask)
+                return true
+            } else {
+                return false
+            }
         } else {
             _tasks.add(0, newTask)
             addToIndex(newTask)

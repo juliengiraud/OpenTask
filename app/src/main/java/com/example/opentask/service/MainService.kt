@@ -69,11 +69,7 @@ class MainService : Service() {
                 }
             }
 
-            val today = LocalDate.now()
-            if (task.dueDate?.toLocalDate() == today || oldTask?.dueDate?.toLocalDate() == today || 
-                task.createdAt.toLocalDate() == today || oldTask?.createdAt?.toLocalDate() == today) {
-                updateNotification()
-            }
+            updateNotification()
         }
 
         // Scenario 2: External Changes detected from the FolderWatcher

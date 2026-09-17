@@ -26,13 +26,24 @@ class FolderWatcherManager(
     
     // Thread-safe set of filenames to ignore during application writes to break infinite loops
     private val pausedFiles = Collections.synchronizedSet(mutableSetOf<String>())
+    private val resumeJobs = mutableMapOf<String, Job>()
 
     fun pauseWatching(filename: String) {
+        resumeJobs[filename]?.cancel()
+        resumeJobs.remove(filename)
         pausedFiles.add(filename)
     }
 
     fun resumeWatching(filename: String) {
-        pausedFiles.remove(filename)
+        // Use a settlement delay before actually removing from the set
+        // to catch the asynchronous "echo" from the OS after a file close
+        resumeJobs[filename]?.cancel()
+        val job = CoroutineScope(Dispatchers.Main).launch {
+            delay(FS_EVENT_DEBOUNCE_MS.milliseconds)
+            pausedFiles.remove(filename)
+            resumeJobs.remove(filename)
+        }
+        resumeJobs[filename] = job
     }
 
     fun isPaused(filename: String): Boolean {
@@ -117,8 +128,8 @@ class FolderWatcherManager(
         pendingEventKinds[name] = event.kind
 
         val job = CoroutineScope(Dispatchers.Main).launch {
-            // Apply 100ms debounce delay per file to prevent long spam
-            delay(100.milliseconds)
+            // Apply debounce delay per file to prevent long spam
+            delay(FS_EVENT_DEBOUNCE_MS.milliseconds)
             val finalKind = pendingEventKinds.remove(name) ?: return@launch
             pendingEventJobs.remove(name)
             
@@ -143,5 +154,9 @@ class FolderWatcherManager(
         watchChannel?.close()
         watchChannel = null
         pausedFiles.clear()
+    }
+
+    companion object {
+        const val FS_EVENT_DEBOUNCE_MS = 100L
     }
 }
