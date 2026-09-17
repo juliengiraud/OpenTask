@@ -72,9 +72,20 @@ fun NoteDetailScreen(
         mutableStateOf(TextFieldValue(content))
     }
     
-    // Detect external updates
+    // Sync local state with prop when not editing
+    LaunchedEffect(task, isEditMode) {
+        if (!isEditMode || task.id != initialTask.id) {
+            titleValue = task.title
+            val newContent = if (isParsedMode) task.textContent else task.toRaw()
+            textFieldValue = TextFieldValue(newContent)
+            initialTask = task
+            currentTaskState = task
+        }
+    }
+    
+    // Detect external updates while editing
     LaunchedEffect(task) {
-        if (task.id == initialTask.id && task.lastUpdate != initialTask.lastUpdate) {
+        if (isEditMode && task.id == initialTask.id && task.lastUpdate != initialTask.lastUpdate) {
             val currentContent = textFieldValue.text
             
             val initialBody = initialTask.textContent
