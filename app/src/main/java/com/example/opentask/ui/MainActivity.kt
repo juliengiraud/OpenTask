@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
 
         fun createNewTask(context: Context, exitOnBack: Boolean = false, dueDate: java.time.LocalDateTime? = null) {
             if (context is MainActivity) {
-                val newTask = TaskRepository.createEmptyTask(dueDate)
+                val newTask = Task.create(dueDate)
                 openTask(context, newTask, isEditMode = true, exitOnBack = exitOnBack)
             } else {
                 context.startActivity(createIntent(context, isEditMode = true, exitOnBack = exitOnBack, createNew = true, dueDate = dueDate))
@@ -204,7 +204,7 @@ class MainActivity : ComponentActivity() {
         if (createNew) {
             val dueDateStr = intent?.getStringExtra(EXTRA_DUE_DATE)
             val dueDate = dueDateStr?.let { java.time.LocalDateTime.parse(it) }
-            selectedTask = TaskRepository.createEmptyTask(dueDate)
+            selectedTask = Task.create(dueDate)
         } else if (taskId != null) {
             selectedTask = TaskRepository.tasks.find { it.id == taskId }
         }

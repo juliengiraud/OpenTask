@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 object TaskRepository {
     private val _tasks = mutableStateListOf<Task>()
@@ -15,7 +14,7 @@ object TaskRepository {
     private val _tasksByDate = mutableStateMapOf<LocalDate, SnapshotStateList<Task>>()
 
     // In-memory mutation callback hooks to decouple filesystem saving from repository operations
-    var onTaskChangedInMemory: ((Task, isDeleted: Boolean, oldTask: Task?) -> Unit)? = null
+    var onTaskChangedInMemory: ((Task, isDeleted: Boolean) -> Unit)? = null
 
     // Kept temporary properties to avoid breaking MainService / UI listeners before Step 5 complete integration
     var onTaskSaved: ((String, Task) -> Unit)? = null
@@ -62,19 +61,19 @@ object TaskRepository {
             if (isEmpty) {
                 removeFromIndex(oldTask)
                 _tasks.removeAt(index)
-                onTaskChangedInMemory?.invoke(oldTask, true, oldTask)
+                onTaskChangedInMemory?.invoke(oldTask, true)
                 onTaskDeleted?.invoke(oldTask.filename, oldTask)
             } else {
                 removeFromIndex(oldTask)
                 _tasks[index] = newTask
                 addToIndex(newTask)
-                onTaskChangedInMemory?.invoke(newTask, false, oldTask)
+                onTaskChangedInMemory?.invoke(newTask, false)
                 onTaskSaved?.invoke(newTask.filename, newTask)
             }
         } else if (!isEmpty) {
             _tasks.add(0, newTask)
             addToIndex(newTask)
-            onTaskChangedInMemory?.invoke(newTask, false, null)
+            onTaskChangedInMemory?.invoke(newTask, false)
             onTaskSaved?.invoke(newTask.filename, newTask)
         }
     }
@@ -85,7 +84,7 @@ object TaskRepository {
             val task = _tasks[index]
             removeFromIndex(task)
             _tasks.removeAt(index)
-            onTaskChangedInMemory?.invoke(task, true, task)
+            onTaskChangedInMemory?.invoke(task, true)
             onTaskDeleted?.invoke(task.filename, task)
         }
     }
@@ -100,7 +99,7 @@ object TaskRepository {
             val task = _tasks[index]
             removeFromIndex(task)
             _tasks.removeAt(index)
-            onTaskChangedInMemory?.invoke(task, true, task)
+            onTaskChangedInMemory?.invoke(task, true)
             onTaskDeleted?.invoke(task.filename, task)
             return true
         }
@@ -117,7 +116,7 @@ object TaskRepository {
             addToIndex(newTask)
 
             if (oldTask.toRaw() != newTask.toRaw()) {
-                onTaskChangedInMemory?.invoke(newTask, false, oldTask)
+                onTaskChangedInMemory?.invoke(newTask, false)
                 return true
             } else {
                 return false
@@ -125,12 +124,10 @@ object TaskRepository {
         } else {
             _tasks.add(0, newTask)
             addToIndex(newTask)
-            onTaskChangedInMemory?.invoke(newTask, false, null)
+            onTaskChangedInMemory?.invoke(newTask, false)
             return true
         }
     }
-
-    fun getTaskTitles(): List<String> = _tasks.map { it.title }
 
     fun getTodaysTaskTitles(): List<String> {
         val today = LocalDate.now()
@@ -140,29 +137,9 @@ object TaskRepository {
             ?: emptyList()
     }
 
-    fun getTodaysTasks(): List<Task> {
-        return getTasksForDate(LocalDate.now())
-    }
-
     fun getTasksForDate(date: LocalDate): List<Task> {
         return _tasksByDate[date]
             ?.filter { !it.isDone }
             ?: emptyList()
-    }
-
-    fun createEmptyTask(dueDate: LocalDateTime? = null): Task {
-        val now = LocalDateTime.now()
-        val dateStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
-        val filename = "$dateStr.md"
-        
-        return Task(
-            id = filename,
-            title = "",
-            textContent = "",
-            filename = filename,
-            createdAt = now,
-            lastUpdate = now,
-            dueDate = dueDate
-        )
     }
 }

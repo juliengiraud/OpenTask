@@ -18,7 +18,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 
 class MainService : Service() {
 
@@ -48,7 +47,7 @@ class MainService : Service() {
         fileStorageManager = FileStorageManager(this)
 
         // Scenario 3: Create/modify from the app
-        TaskRepository.onTaskChangedInMemory = { task, isDeleted, oldTask ->
+        TaskRepository.onTaskChangedInMemory = { task, isDeleted ->
             val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
                 .getString("watched_folder", null)
             
@@ -116,7 +115,7 @@ class MainService : Service() {
                         scanAndLoadFolderInternal(folderUri)
                         
                         withContext(Dispatchers.Main) {
-                            notificationManager.start(this@MainService, TaskRepository.getTodaysTaskTitles())
+                            notificationManager.start(this@MainService)
                         }
                     }
                 } else {

@@ -66,6 +66,22 @@ data class Task(
             "creation_date"
         )
 
+        fun create(dueDate: LocalDateTime? = null): Task {
+            val now = LocalDateTime.now()
+            val dateStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
+            val filename = "$dateStr.md"
+
+            return Task(
+                id = filename,
+                title = "",
+                textContent = "",
+                filename = filename,
+                createdAt = now,
+                lastUpdate = now,
+                dueDate = dueDate
+            )
+        }
+
         /**
          * Parses a raw Markdown string into a Task object.
          *

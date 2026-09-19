@@ -11,6 +11,7 @@ import android.text.SpannableString
 import android.text.style.AbsoluteSizeSpan
 import androidx.core.app.NotificationCompat
 import com.example.opentask.R
+import com.example.opentask.model.TaskRepository
 import com.example.opentask.ui.PopupActivity
 
 class AppNotificationManager(private val context: Context) {
@@ -24,8 +25,8 @@ class AppNotificationManager(private val context: Context) {
         createNotificationChannel()
     }
 
-    fun start(service: Service, initialTaskNames: List<String>) {
-        this.taskNames = initialTaskNames
+    fun start(service: Service) {
+        this.taskNames = TaskRepository.getTodaysTaskTitles()
         service.startForeground(foregroundId, getForegroundNotification())
     }
 
