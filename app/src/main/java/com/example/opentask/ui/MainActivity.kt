@@ -109,6 +109,8 @@ class MainActivity : ComponentActivity() {
     var isEditMode by mutableStateOf(false)
     var exitOnBack by mutableStateOf(false)
 
+    lateinit var repository: TaskRepository
+
     private val debugReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == MainService.ACTION_DEBUG_LOG) {
@@ -140,8 +142,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        repository = TaskRepository.getInstance(this)
         enableEdgeToEdge()
-
+        
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         watchedFolder = prefs.getString("watched_folder", null)
         AppConfig.showWeekNumber = prefs.getBoolean("show_week_number", true)
@@ -165,6 +168,7 @@ class MainActivity : ComponentActivity() {
             OpenTaskTheme {
                 OpenTaskApp(
                     activity = this,
+                    repository = repository,
                     onSelectFolder = { folderPickerLauncher.launch(null) },
                     onResetWatcher = {
                         watchedFolder = null
@@ -206,7 +210,7 @@ class MainActivity : ComponentActivity() {
             val dueDate = dueDateStr?.let { java.time.LocalDateTime.parse(it) }
             selectedTask = Task.create(dueDate)
         } else if (taskId != null) {
-            selectedTask = TaskRepository.tasks.find { it.filename == taskId }
+            selectedTask = repository.getTaskById(taskId)
         }
     }
 
@@ -219,6 +223,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun OpenTaskApp(
     activity: MainActivity,
+    repository: TaskRepository,
     onSelectFolder: () -> Unit,
     onResetWatcher: () -> Unit,
     watchedFolder: String?,
@@ -247,7 +252,7 @@ fun OpenTaskApp(
     }
 
     // Sync selected task with repository updates (external changes)
-    val tasks = TaskRepository.tasks
+    val tasks = activity.repository.getAllTasks()
     LaunchedEffect(tasks.toList()) {
         activity.selectedTask?.let { current ->
             val updated = tasks.find { it.filename == current.filename }
@@ -278,10 +283,10 @@ fun OpenTaskApp(
             onEditModeChange = { activity.isEditMode = it },
             onSave = { newContent ->
                 val currentId = activity.selectedTask?.filename ?: return@NoteDetailScreen
-                TaskRepository.updateTask(currentId, newContent)
+                activity.repository.updateTask(currentId, newContent)
                 
                 // Refresh selected task from repo or exit if deleted
-                val updatedTask = TaskRepository.tasks.find { it.filename == currentId }
+                val updatedTask = activity.repository.getTaskById(currentId)
                 if (updatedTask == null) {
                     activity.selectedTask = null
                     activity.isEditMode = false
@@ -345,6 +350,7 @@ fun OpenTaskApp(
                 val tab = AppTabs.entries[pageIndex % actualPageCount]
                 when (tab) {
                     AppTabs.HOME -> NotesScreen(
+                        repository = repository,
                         modifier = Modifier.fillMaxSize()
                     )
                     AppTabs.CALENDAR -> CalendarScreen(

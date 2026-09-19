@@ -1,12 +1,13 @@
 package com.example.opentask.model
 
+import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-object TaskRepository {
+class TaskRepository private constructor(context: Context) {
     private val _tasks = mutableStateListOf<Task>()
     val tasks: List<Task> get() = _tasks
     
@@ -19,6 +20,14 @@ object TaskRepository {
     // Kept temporary properties to avoid breaking MainService / UI listeners before Step 5 complete integration
     var onTaskSaved: ((String, Task) -> Unit)? = null
     var onTaskDeleted: ((String, Task) -> Unit)? = null
+
+    fun getAllTasks(): List<Task> {
+        return _tasks
+    }
+
+    fun getTaskById(taskId: String): Task? {
+        return _tasks.find { it.filename == taskId }
+    }
 
     private fun rebuildIndex() {
         _tasksByDate.clear()
@@ -140,5 +149,15 @@ object TaskRepository {
         return _tasksByDate[date]
             ?.filter { !it.isDone }
             ?: emptyList()
+    }
+
+    companion object {
+        private var instance: TaskRepository? = null
+
+        fun getInstance(context: Context): TaskRepository {
+            return instance ?: synchronized(this) {
+                instance ?: TaskRepository(context).also { instance = it }
+            }
+        }
     }
 }

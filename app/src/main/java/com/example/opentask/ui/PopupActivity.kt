@@ -39,9 +39,11 @@ import java.time.LocalDate
 
 class PopupActivity : ComponentActivity() {
     private var currentDate by mutableStateOf(LocalDate.now())
+    private lateinit var repository: TaskRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        repository = TaskRepository.getInstance(this)
         enableEdgeToEdge()
 
         handleIntent(intent)
@@ -55,7 +57,7 @@ class PopupActivity : ComponentActivity() {
                 // Use derivedStateOf to react to TaskRepository index changes automatically
                 val todaysTasks by remember(date) {
                     derivedStateOf {
-                        TaskRepository.getTasksForDate(date)
+                        repository.getTasksForDate(date)
                     }
                 }
 

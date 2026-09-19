@@ -26,6 +26,7 @@ class MainService : Service() {
     private lateinit var debugManager: DebugManager
     private lateinit var fileStorageManager: FileStorageManager
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private lateinit var repository: TaskRepository
 
     private val filenameRegex = Regex("""\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md""")
 
@@ -42,12 +43,13 @@ class MainService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        repository = TaskRepository.getInstance(this)
         debugManager = DebugManager(this)
         notificationManager = AppNotificationManager(this)
         fileStorageManager = FileStorageManager(this)
 
         // Scenario 3: Create/modify from the app
-        TaskRepository.onTaskChangedInMemory = { task, isDeleted ->
+        repository.onTaskChangedInMemory = { task, isDeleted ->
             val folderUriString = getSharedPreferences("settings", MODE_PRIVATE)
                 .getString("watched_folder", null)
             
@@ -88,7 +90,7 @@ class MainService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        debugManager.log("MainService", "Repository status: ${TaskRepository.tasks.size} notes in memory")
+        debugManager.log("MainService", "Repository status: ${repository.getAllTasks().size} notes in database")
         val folderUri = getSharedPreferences("settings", MODE_PRIVATE)
             .getString("watched_folder", null)
 
@@ -104,7 +106,7 @@ class MainService : Service() {
             ACTION_RESET_WATCHER -> {
                 ensureWatcherInitialized()
                 folderWatcherManager?.reset()
-                TaskRepository.setTasks(emptyList())
+                repository.setTasks(emptyList())
                 updateNotification()
             }
             else -> {
@@ -142,7 +144,7 @@ class MainService : Service() {
         serviceScope.cancel()
         unregisterReceiver(dateChangeReceiver)
         folderWatcherManager?.stop()
-        TaskRepository.onTaskChangedInMemory = null
+        repository.onTaskChangedInMemory = null
     }
 
     inner class DocFile(val name: String, val uri: Uri) {
@@ -190,6 +192,10 @@ class MainService : Service() {
         return DocFile(filename, fileUri)
     }
 
+    fun getFolderPath(folderUriString: String): String {
+        return folderUriString.toUri().path?.split(":")?.getOrNull(1) ?: ""
+    }
+
     // Scenario 1: Select folder, list files, and initialize repository
     private suspend fun scanAndLoadFolderInternal(folderUriString: String?) {
         if (folderUriString == null) return
@@ -216,7 +222,7 @@ class MainService : Service() {
             
             withContext(Dispatchers.Main) {
                 debugManager.log("MainService", "Folder scan complete: Loaded ${loadedTasks.size} notes in ${totalDuration}ms (query: ${queryDuration}ms)")
-                TaskRepository.setTasks(loadedTasks)
+                repository.setTasks(loadedTasks)
                 updateNotification()
             }
         } catch (e: Exception) {
@@ -234,7 +240,7 @@ class MainService : Service() {
         folderWatcherManager?.pauseWatching(filename)
         try {
             if (kind == KWatchEventKind.DELETED) {
-                if (TaskRepository.delete(filename)) {
+                if (repository.delete(filename)) {
                     debugManager.log("MainService", "External Change: Deleted note $filename from memory")
                 }
                 return
@@ -245,7 +251,7 @@ class MainService : Service() {
             val content = file.getContent()
             if (content != null) {
                 val externalTask = Task.fromRaw(filename, content)
-                if (TaskRepository.upsert(externalTask)) {
+                if (repository.upsert(externalTask)) {
                     debugManager.log("MainService", "External Change: Synchronized note $filename with memory")
                 }
             }
@@ -257,7 +263,7 @@ class MainService : Service() {
     }
 
     private fun updateNotification() {
-        notificationManager.updateForegroundNotification(TaskRepository.getTodaysTaskTitles())
+        notificationManager.updateForegroundNotification(repository.getTodaysTaskTitles())
     }
 
     companion object {

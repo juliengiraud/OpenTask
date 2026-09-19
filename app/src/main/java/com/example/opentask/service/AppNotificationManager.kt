@@ -26,7 +26,7 @@ class AppNotificationManager(private val context: Context) {
     }
 
     fun start(service: Service) {
-        this.taskNames = TaskRepository.getTodaysTaskTitles()
+        this.taskNames = TaskRepository.getInstance(context).getTodaysTaskTitles()
         service.startForeground(foregroundId, getForegroundNotification())
     }
 

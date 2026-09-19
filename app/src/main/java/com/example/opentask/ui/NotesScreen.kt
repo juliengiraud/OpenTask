@@ -18,9 +18,10 @@ import com.example.opentask.model.TaskRepository
 
 @Composable
 fun NotesScreen(
+    repository: TaskRepository,
     modifier: Modifier = Modifier
 ) {
-    val tasks = TaskRepository.tasks
+    val tasks = repository.getAllTasks()
 
     Column(
         modifier = modifier
