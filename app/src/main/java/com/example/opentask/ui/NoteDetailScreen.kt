@@ -64,7 +64,7 @@ fun NoteDetailScreen(
     // Track the version of the task we started with
     var initialTask by remember(task.id) { mutableStateOf(task) }
     var currentTaskState by remember(task.id) { mutableStateOf(task) }
-    var titleValue by remember(task.id) { mutableStateOf(task.title) }
+    var titleValue by remember(task.id) { mutableStateOf(TextFieldValue(task.title)) }
     var isTitleFocused by remember { mutableStateOf(false) }
 
     var textFieldValue by remember(task.id, isParsedMode) { 
@@ -75,7 +75,7 @@ fun NoteDetailScreen(
     // Sync local state with prop when not editing
     LaunchedEffect(task, isEditMode) {
         if (!isEditMode || task.id != initialTask.id) {
-            titleValue = task.title
+            titleValue = TextFieldValue(task.title)
             val newContent = if (isParsedMode) task.textContent else task.toRaw()
             textFieldValue = TextFieldValue(newContent)
             initialTask = task
@@ -94,7 +94,7 @@ fun NoteDetailScreen(
             
             val initialTitle = initialTask.title
             val remoteTitle = task.title
-            val localTitle = titleValue
+            val localTitle = titleValue.text
             
             val localChanged = if (isParsedMode) {
                 localTitle != initialTitle || localBody != initialBody
@@ -114,13 +114,13 @@ fun NoteDetailScreen(
                 
                 val mergedTask = Task.merge(initialTask, localTask, task)
                 
-                titleValue = mergedTask.title
+                titleValue = TextFieldValue(mergedTask.title, TextRange(mergedTask.title.length))
                 val newContent = if (isParsedMode) mergedTask.textContent else mergedTask.toRaw()
                 textFieldValue = TextFieldValue(newContent, TextRange(newContent.length))
 
             } else if (remoteChangedMeaningfully) {
                 // Remote changed, but local is clean. Auto-apply.
-                titleValue = task.title
+                titleValue = TextFieldValue(task.title, TextRange(task.title.length))
                 val newContent = if (isParsedMode) task.textContent else task.toRaw()
                 textFieldValue = textFieldValue.copy(
                     text = newContent,
@@ -154,13 +154,13 @@ fun NoteDetailScreen(
     val bodyFocusRequester = remember { FocusRequester() }
 
     val handleSave = { bodyContent: String ->
-        val toSave = currentTaskState.copy(title = titleValue, textContent = bodyContent).toRaw()
+        val toSave = currentTaskState.copy(title = titleValue.text, textContent = bodyContent).toRaw()
         onSave(toSave)
     }
 
     val handleBackInternal = {
         if (isParsedMode) {
-            val isDirty = titleValue != initialTask.title || textFieldValue.text != initialTask.textContent
+            val isDirty = titleValue.text != initialTask.title || textFieldValue.text != initialTask.textContent
             if (isDirty) {
                 handleSave(textFieldValue.text)
             }
@@ -172,7 +172,7 @@ fun NoteDetailScreen(
 
     LaunchedEffect(isEditMode) {
         if (isEditMode) {
-            if (titleValue.isEmpty()) {
+            if (titleValue.text.isEmpty()) {
                 titleFocusRequester.requestFocus()
             } else {
                 bodyFocusRequester.requestFocus()
@@ -223,19 +223,27 @@ fun NoteDetailScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .onFocusChanged { isTitleFocused = it.isFocused }
-                                .background(Color.White, shape = shape)
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isTitleFocused) AppConfig.EditorFocusBorderColor else Color.Transparent,
-                                    shape = shape
-                                )
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
                                 .focusRequester(titleFocusRequester),
-                            singleLine = true
+                            singleLine = true,
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color.White, shape = shape)
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (isTitleFocused) AppConfig.EditorFocusBorderColor else Color.Transparent,
+                                            shape = shape
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    innerTextField()
+                                }
+                            }
                         )
                     } else {
                         Text(
-                            text = titleValue,
+                            text = titleValue.text,
                             style = MaterialTheme.typography.headlineMedium,
                             maxLines = 1,
                             modifier = Modifier.weight(1f)
@@ -249,7 +257,7 @@ fun NoteDetailScreen(
                     modifier = Modifier
                         .clickable(enabled = isParsedMode || isEditMode) {
                             if (isEditMode) {
-                                val isDirty = titleValue != initialTask.title || textFieldValue.text != initialTask.textContent
+                                val isDirty = titleValue.text != initialTask.title || textFieldValue.text != initialTask.textContent
                                 if (isDirty) {
                                     handleSave(textFieldValue.text)
                                 }
@@ -298,10 +306,10 @@ fun NoteDetailScreen(
                             val newTask = Task.fromRaw(task.filename, textFieldValue.text)
                             currentTaskState = newTask
                             textFieldValue = TextFieldValue(newTask.textContent)
-                            titleValue = newTask.title
+                            titleValue = TextFieldValue(newTask.title)
                         } else {
                             // Parsed -> Raw
-                            val raw = currentTaskState.copy(title = titleValue, textContent = textFieldValue.text).toRaw()
+                            val raw = currentTaskState.copy(title = titleValue.text, textContent = textFieldValue.text).toRaw()
                             textFieldValue = TextFieldValue(raw)
                         }
                         isParsedMode = checked
