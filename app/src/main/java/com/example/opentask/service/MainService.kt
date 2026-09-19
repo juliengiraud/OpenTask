@@ -22,7 +22,7 @@ import java.time.LocalDate
 
 class MainService : Service() {
 
-    private lateinit var folderWatcherManager: FolderWatcherManager
+    private var folderWatcherManager: FolderWatcherManager? = null
     private lateinit var notificationManager: AppNotificationManager
     private lateinit var debugManager: DebugManager
     private lateinit var fileStorageManager: FileStorageManager
@@ -54,13 +54,13 @@ class MainService : Service() {
             
             // If the watcher is already pausing this file, it means the change is coming from the filesystem.
             // We skip the redundant write to disk.
-            val isExternalSync = ::folderWatcherManager.isInitialized && folderWatcherManager.isPaused(task.filename)
+            val isExternalSync = folderWatcherManager?.isPaused(task.filename) == true
 
             if (folderUriString != null && !isExternalSync) {
                 val folderUri = folderUriString.toUri()
                 
                 // 1. Pause watching on corresponding file to avoid infinite self-trigger loops
-                folderWatcherManager.pauseWatching(task.filename)
+                folderWatcherManager?.pauseWatching(task.filename)
                 
                 try {
                     if (isDeleted) {
@@ -72,16 +72,11 @@ class MainService : Service() {
                     }
                 } finally {
                     // 2. Re-enable watching on corresponding file once I/O finishes
-                    folderWatcherManager.resumeWatching(task.filename)
+                    folderWatcherManager?.resumeWatching(task.filename)
                 }
             }
 
             updateNotification()
-        }
-
-        // Scenario 2: External Changes detected from the FolderWatcher
-        folderWatcherManager = FolderWatcherManager(debugManager) { filename, kind ->
-            handleExternalFileEvent(filename, kind)
         }
 
         val filter = IntentFilter().apply {
@@ -94,6 +89,7 @@ class MainService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        debugManager.log("MainService", "Repository status: ${TaskRepository.tasks.size} notes in memory")
         val folderUri = getSharedPreferences("settings", MODE_PRIVATE)
             .getString("watched_folder", null)
 
@@ -101,34 +97,52 @@ class MainService : Service() {
             ACTION_UPDATE_WATCHED_FOLDER -> {
                 val newFolderUri = intent.getStringExtra(EXTRA_FOLDER_URI)
                 serviceScope.launch {
-                    folderWatcherManager.setupWatcher(newFolderUri)
+                    ensureWatcherInitialized()
+                    folderWatcherManager?.setupWatcher(newFolderUri)
                     scanAndLoadFolderInternal(newFolderUri)
                 }
             }
             ACTION_RESET_WATCHER -> {
-                folderWatcherManager.reset()
+                ensureWatcherInitialized()
+                folderWatcherManager?.reset()
                 TaskRepository.setTasks(emptyList())
                 updateNotification()
             }
             else -> {
-                serviceScope.launch {
-                    folderWatcherManager.setupWatcher(folderUri)
-                    scanAndLoadFolderInternal(folderUri)
-                    
-                    withContext(Dispatchers.Main) {
-                        notificationManager.start(this@MainService, TaskRepository.getTodaysTaskTitles())
+                if (folderWatcherManager == null) {
+                    serviceScope.launch {
+                        ensureWatcherInitialized()
+                        folderWatcherManager?.setupWatcher(folderUri)
+                        scanAndLoadFolderInternal(folderUri)
+                        
+                        withContext(Dispatchers.Main) {
+                            notificationManager.start(this@MainService, TaskRepository.getTodaysTaskTitles())
+                        }
                     }
+                } else {
+                    debugManager.log("MainService", "Service already running")
+                    folderWatcherManager?.logStatus()
+                    updateNotification()
                 }
             }
         }
         return START_STICKY
     }
 
+    private fun ensureWatcherInitialized() {
+        if (folderWatcherManager == null) {
+            // Scenario 2: External Changes detected from the FolderWatcher
+            folderWatcherManager = FolderWatcherManager(debugManager) { filename, kind ->
+                handleExternalFileEvent(filename, kind)
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
         unregisterReceiver(dateChangeReceiver)
-        folderWatcherManager.stop()
+        folderWatcherManager?.stop()
         TaskRepository.onTaskChangedInMemory = null
     }
 
@@ -218,7 +232,7 @@ class MainService : Service() {
             .getString("watched_folder", null) ?: return
 
         // Signal to the repository listener that this is an external sync
-        folderWatcherManager.pauseWatching(filename)
+        folderWatcherManager?.pauseWatching(filename)
         try {
             if (kind == KWatchEventKind.DELETED) {
                 if (TaskRepository.delete(filename)) {
@@ -239,7 +253,7 @@ class MainService : Service() {
         } catch (e: Exception) {
             debugManager.log("MainService", "External sync error: ${e.message}")
         } finally {
-            folderWatcherManager.resumeWatching(filename)
+            folderWatcherManager?.resumeWatching(filename)
         }
     }
 

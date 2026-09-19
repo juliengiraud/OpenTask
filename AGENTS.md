@@ -25,9 +25,11 @@
 - **Code Hygiene & Best Practices:**
   - **Structured Concurrency (NO GlobalScope):** Do not use `GlobalScope` for launching coroutines or as a default constructor fallback value. Always require an explicit, properly lifecycle-managed `CoroutineScope` to prevent resource and memory leaks.
   - **Explicit Imports (NO Star/Wildcard Imports):** Never use wildcard or star imports (`*`). Always list each import explicitly to maintain visibility, clean namespaces, and avoid declaration collisions.
+  - **Factorization Restriction:** Do not create utility methods or helpers for code factorization unless they are used in **all** applicable locations immediately. Avoid partially-used abstractions.
 - **Interaction & Feedback:**
   - When the user provides instructions on how to interact (meta-instructions), always add them to `AGENTS.md` to ensure they persist across sessions.
   - **Proactive Memory Management:** Automatically update `AGENTS.md` with meta-learnings, architectural rules, or interaction preferences at the end of a task. Do not wait for a reminder.
+  - **Memory Update Protocol (STRICT):** Every technical restriction, forbidden rule, or behavioral correction provided by the user MUST be documented in `AGENTS.md` in the same turn it is received. This is a critical requirement to maintain alignment across sessions.
   - **Strict Scope Control:** Do not modify `TODO.md`. This file is reserved for the user's manual tracking.
   - Address user questions directly and avoid treating questions about past actions as new tasks without answering them first.
   - **Strict Scope Control:** When given specific feedback on a single aspect of a UI component (e.g., alignment), do not modify other aspects (e.g., size) unless explicitly requested. Stay strictly within the scope of the instruction.
@@ -78,6 +80,7 @@
   - **Asynchronous Event Debouncing**: Accumulate filesystem event triggers in a per-file stack queue and apply a debounce delay (`FS_EVENT_DEBOUNCE_MS`, typically 100ms). New intermediate events for the same file replace previous states and reset the timer, logging and calling actions only for the final resolved state after settlement.
   - **Echo Suppression**: To prevent the watcher from triggering on the app's own writes, use `pauseWatching`/`resumeWatching` with a settlement delay (matching the debounce time) during I/O operations. This ensures the asynchronous OS "echo" is reliably caught while the file is still ignored.
   - **Background Initialization**: Perform initial directory scans and watcher setup in a background `CoroutineScope` (e.g., `Dispatchers.IO`) to prevent ANRs, especially when dealing with hundreds of files.
+  - **Service Lifecycle Optimization**: To avoid redundant I/O and "ClosedWatchServiceException" logs, the `MainService` should skip folder scanning and watcher setup if it is already initialized (e.g., when the Activity re-connects to an existing Foreground Service instance). Use a null check on the `FolderWatcherManager` to determine initialization state.
 - **Anti-Patterns & Lessons Learned:**
   - **Avoid Over-Engineering Repository Updates**: When replacing an item in a list to trigger a UI update, do not attempt to "optimize" by checking for specific field changes (like dates) unless flickering is a proven issue. A simple, predictable replacement is often safer and maintains the correct "last update" state.
   - **Main Thread I/O is Critical**: Never perform bulk filesystem operations (like reading 300+ files) or service setup synchronously on the Main Thread. Always wrap these in a dedicated `CoroutineScope` with `Dispatchers.IO`.

@@ -107,7 +107,7 @@ class FolderWatcherManager(
                     )
                 }
             }
-            debugManager.log("FolderWatcherManager", "Watching: ${folder.absolutePath}")
+            logStatus()
 
         } catch (e: Exception) {
             debugManager.log("FolderWatcherManager", "Setup Error: ${e.message}")
@@ -145,6 +145,15 @@ class FolderWatcherManager(
     fun reset() {
         debugManager.log("FolderWatcherManager", "Watcher reset.")
         stop()
+    }
+
+    fun logStatus() {
+        val path = watchChannel?.file?.absolutePath
+        if (path != null) {
+            debugManager.log("FolderWatcherManager", "Watching: $path")
+        } else {
+            debugManager.log("FolderWatcherManager", "Watcher status: Inactive")
+        }
     }
 
     fun stop() {
