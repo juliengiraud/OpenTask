@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                 context.isEditMode = isEditMode
                 context.exitOnBack = exitOnBack
             } else {
-                context.startActivity(createIntent(context, task.id, isEditMode, exitOnBack))
+                context.startActivity(createIntent(context, task.filename, isEditMode, exitOnBack))
             }
         }
 
@@ -206,7 +206,7 @@ class MainActivity : ComponentActivity() {
             val dueDate = dueDateStr?.let { java.time.LocalDateTime.parse(it) }
             selectedTask = Task.create(dueDate)
         } else if (taskId != null) {
-            selectedTask = TaskRepository.tasks.find { it.id == taskId }
+            selectedTask = TaskRepository.tasks.find { it.filename == taskId }
         }
     }
 
@@ -250,7 +250,7 @@ fun OpenTaskApp(
     val tasks = TaskRepository.tasks
     LaunchedEffect(tasks.toList()) {
         activity.selectedTask?.let { current ->
-            val updated = tasks.find { it.id == current.id }
+            val updated = tasks.find { it.filename == current.filename }
             if (updated != null && updated !== current) {
                 // Only update if it's a different instance (likely from a repository reload)
                 activity.selectedTask = updated
@@ -277,11 +277,11 @@ fun OpenTaskApp(
             isEditMode = activity.isEditMode,
             onEditModeChange = { activity.isEditMode = it },
             onSave = { newContent ->
-                val currentId = activity.selectedTask?.id ?: return@NoteDetailScreen
+                val currentId = activity.selectedTask?.filename ?: return@NoteDetailScreen
                 TaskRepository.updateTask(currentId, newContent)
                 
                 // Refresh selected task from repo or exit if deleted
-                val updatedTask = TaskRepository.tasks.find { it.id == currentId }
+                val updatedTask = TaskRepository.tasks.find { it.filename == currentId }
                 if (updatedTask == null) {
                     activity.selectedTask = null
                     activity.isEditMode = false

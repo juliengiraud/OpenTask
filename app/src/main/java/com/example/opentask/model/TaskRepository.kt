@@ -32,7 +32,7 @@ object TaskRepository {
 
     private fun removeFromIndex(task: Task) {
         val date = task.dueDate?.toLocalDate() ?: return
-        _tasksByDate[date]?.removeIf { it.id == task.id }
+        _tasksByDate[date]?.removeIf { it.filename == task.filename }
         if (_tasksByDate[date]?.isEmpty() == true) {
             _tasksByDate.remove(date)
         }
@@ -45,12 +45,11 @@ object TaskRepository {
     }
 
     fun updateTask(taskId: String, newRawContent: String) {
-        val index = _tasks.indexOfFirst { it.id == taskId }
+        val index = _tasks.indexOfFirst { it.filename == taskId }
         val filename = if (index != -1) _tasks[index].filename else taskId
         val now = LocalDateTime.now().withNano(0)
         
         val newTask = Task.fromRaw(filename, newRawContent).copy(
-            id = taskId,
             lastUpdate = now
         )
 
@@ -79,7 +78,7 @@ object TaskRepository {
     }
 
     fun deleteTask(taskId: String) {
-        val index = _tasks.indexOfFirst { it.id == taskId }
+        val index = _tasks.indexOfFirst { it.filename == taskId }
         if (index != -1) {
             val task = _tasks[index]
             removeFromIndex(task)

@@ -62,19 +62,19 @@ fun NoteDetailScreen(
     var isParsedMode by remember { mutableStateOf(true) }
     
     // Track the version of the task we started with
-    var initialTask by remember(task.id) { mutableStateOf(task) }
-    var currentTaskState by remember(task.id) { mutableStateOf(task) }
-    var titleValue by remember(task.id) { mutableStateOf(TextFieldValue(task.title)) }
+    var initialTask by remember(task.filename) { mutableStateOf(task) }
+    var currentTaskState by remember(task.filename) { mutableStateOf(task) }
+    var titleValue by remember(task.filename) { mutableStateOf(TextFieldValue(task.title)) }
     var isTitleFocused by remember { mutableStateOf(false) }
 
-    var textFieldValue by remember(task.id, isParsedMode) { 
+    var textFieldValue by remember(task.filename, isParsedMode) {
         val content = if (isParsedMode) initialTask.textContent else initialTask.toRaw()
         mutableStateOf(TextFieldValue(content))
     }
     
     // Sync local state with prop when not editing
     LaunchedEffect(task, isEditMode) {
-        if (!isEditMode || task.id != initialTask.id) {
+        if (!isEditMode || task.filename != initialTask.filename) {
             titleValue = TextFieldValue(task.title)
             val newContent = if (isParsedMode) task.textContent else task.toRaw()
             textFieldValue = TextFieldValue(newContent)
@@ -85,7 +85,7 @@ fun NoteDetailScreen(
     
     // Detect external updates while editing
     LaunchedEffect(task) {
-        if (isEditMode && task.id == initialTask.id && task.lastUpdate != initialTask.lastUpdate) {
+        if (isEditMode && task.filename == initialTask.filename && task.lastUpdate != initialTask.lastUpdate) {
             val currentContent = textFieldValue.text
             
             val initialBody = initialTask.textContent

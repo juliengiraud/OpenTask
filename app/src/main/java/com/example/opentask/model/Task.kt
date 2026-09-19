@@ -7,7 +7,6 @@ import java.time.format.DateTimeParseException
 import java.util.UUID
 
 data class Task(
-    val id: String = UUID.randomUUID().toString(),
     val title: String = "",
     val textContent: String = "",
     val filename: String = "",
@@ -72,7 +71,6 @@ data class Task(
             val filename = "$dateStr.md"
 
             return Task(
-                id = filename,
                 title = "",
                 textContent = "",
                 filename = filename,
@@ -203,7 +201,6 @@ data class Task(
             }
 
             return Task(
-                id = filename,
                 title = title,
                 textContent = body,
                 filename = filename,
