@@ -263,7 +263,7 @@ class MainService : Service() {
     }
 
     private fun updateNotification() {
-        notificationManager.updateForegroundNotification(repository.getTodaysTaskTitles())
+        notificationManager.updateForegroundNotification(repository.getTodayTasks())
     }
 
     companion object {

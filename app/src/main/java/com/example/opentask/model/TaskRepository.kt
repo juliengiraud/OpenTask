@@ -1,18 +1,17 @@
 package com.example.opentask.model
 
+import android.content.ContentValues
 import android.content.Context
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.snapshots.SnapshotStateList
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
 import java.time.LocalDate
-import java.time.LocalDateTime
+import androidx.core.database.sqlite.transaction
 
 class TaskRepository private constructor(context: Context) {
-    private val _tasks = mutableStateListOf<Task>()
-    val tasks: List<Task> get() = _tasks
-    
-    // Index for fast lookup by date (due_date if set, otherwise creation_date)
-    private val _tasksByDate = mutableStateMapOf<LocalDate, SnapshotStateList<Task>>()
 
     // In-memory mutation callback hooks to decouple filesystem saving from repository operations
     var onTaskChangedInMemory: ((Task, isDeleted: Boolean) -> Unit)? = null
@@ -21,134 +20,167 @@ class TaskRepository private constructor(context: Context) {
     var onTaskSaved: ((String, Task) -> Unit)? = null
     var onTaskDeleted: ((String, Task) -> Unit)? = null
 
+    private val dbHelper = TaskDbHelper(context.applicationContext)
+    
+    private var mutationTrigger by mutableIntStateOf(0)
+
+    fun cursorToTask(cursor: Cursor): Task? {
+        try {
+            val filenameIdx = cursor.getColumnIndex("filename")
+            val rawContentIdx = cursor.getColumnIndex("raw_content")
+
+            val filename = cursor.getString(filenameIdx) ?: ""
+            val rawContent = cursor.getString(rawContentIdx) ?: ""
+            val task = Task.fromRaw(filename, rawContent)
+            return task
+        } catch (_: Exception) {
+            return null
+        }
+    }
+
+    fun taskToContentValues(task: Task): ContentValues {
+        return ContentValues().apply {
+            put("filename", task.filename)
+            put("title", task.title)
+            put("raw_content", task.toRaw())
+            put("created_at", task.createdAt.toString())
+            put("updated_at", task.lastUpdate.toString())
+            put("due_date", task.dueDate?.toString())
+            put("is_done", if (task.isDone) 1 else 0)
+        }
+    }
+
     fun getAllTasks(): List<Task> {
-        return _tasks
+        mutationTrigger
+        val db = dbHelper.readableDatabase
+        val cursor = db.query("tasks", null, null, null, null, null, "updated_at DESC")
+        val loadedTasks = mutableListOf<Task>()
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                val task = cursorToTask(c)
+                if (task != null) {
+                    loadedTasks.add(task)
+                }
+            }
+        }
+        return loadedTasks
     }
 
     fun getTaskById(taskId: String): Task? {
-        return _tasks.find { it.filename == taskId }
-    }
-
-    private fun rebuildIndex() {
-        _tasksByDate.clear()
-        _tasks.forEach { addToIndex(it) }
-    }
-
-    private fun addToIndex(task: Task) {
-        val date = task.dueDate?.toLocalDate() ?: return
-        _tasksByDate.getOrPut(date) { mutableStateListOf() }.add(task)
-    }
-
-    private fun removeFromIndex(task: Task) {
-        val date = task.dueDate?.toLocalDate() ?: return
-        _tasksByDate[date]?.removeIf { it.filename == task.filename }
-        if (_tasksByDate[date]?.isEmpty() == true) {
-            _tasksByDate.remove(date)
+        mutationTrigger
+        val db = dbHelper.readableDatabase
+        val cursor = db.query("tasks", null, "filename = ?", arrayOf(taskId), null, null, null)
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                return cursorToTask(c)
+            }
+            return null
         }
     }
 
     fun setTasks(newTasks: List<Task>) {
-        _tasks.clear()
-        _tasks.addAll(newTasks)
-        rebuildIndex()
-    }
-
-    fun updateTask(taskId: String, newRawContent: String) {
-        val index = _tasks.indexOfFirst { it.filename == taskId }
-        val filename = if (index != -1) _tasks[index].filename else taskId
-        val now = LocalDateTime.now().withNano(0)
-        
-        val newTask = Task.fromRaw(filename, newRawContent).copy(
-            lastUpdate = now
-        )
-
-        val isEmpty = newTask.title.isBlank() && newTask.textContent.isBlank()
-
-        if (index != -1) {
-            val oldTask = _tasks[index]
-            if (isEmpty) {
-                removeFromIndex(oldTask)
-                _tasks.removeAt(index)
-                onTaskChangedInMemory?.invoke(oldTask, true)
-                onTaskDeleted?.invoke(oldTask.filename, oldTask)
-            } else {
-                removeFromIndex(oldTask)
-                _tasks[index] = newTask
-                addToIndex(newTask)
-                onTaskChangedInMemory?.invoke(newTask, false)
-                onTaskSaved?.invoke(newTask.filename, newTask)
+        val db = dbHelper.writableDatabase
+        db.transaction {
+            try {
+                delete("tasks", null, null)
+                newTasks.forEach { task ->
+                    val values = taskToContentValues(task)
+                    val inserted = insert("tasks", null, values)
+                    val test = inserted
+                }
+            } finally {
             }
-        } else if (!isEmpty) {
-            _tasks.add(0, newTask)
-            addToIndex(newTask)
-            onTaskChangedInMemory?.invoke(newTask, false)
-            onTaskSaved?.invoke(newTask.filename, newTask)
         }
+        mutationTrigger++
     }
 
-    fun deleteTask(taskId: String) {
-        val index = _tasks.indexOfFirst { it.filename == taskId }
-        if (index != -1) {
-            val task = _tasks[index]
-            removeFromIndex(task)
-            _tasks.removeAt(index)
+    fun update(taskId: String, newRawContent: String): Boolean {
+        val oldTask = getTaskById(taskId) ?: return false
+        val newTask = Task.fromRaw(taskId, newRawContent)
+
+        if (newTask.isEmpty()) return delete(oldTask)
+
+        if (newTask.toRaw() == oldTask.toRaw()) return false
+
+        val db = dbHelper.writableDatabase
+        db.replace("tasks", null, taskToContentValues(newTask))
+        onTaskChangedInMemory?.invoke(newTask, false)
+        onTaskSaved?.invoke(newTask.filename, newTask)
+        mutationTrigger++
+        return true
+    }
+
+    fun update(task: Task): Boolean {
+        return update(task.filename, task.toRaw())
+    }
+
+    fun delete(task: Task): Boolean {
+        val db = dbHelper.writableDatabase
+        val deleted = db.delete("tasks", "filename = ?", arrayOf(task.filename))
+        if (deleted == 1) {
             onTaskChangedInMemory?.invoke(task, true)
             onTaskDeleted?.invoke(task.filename, task)
-        }
-    }
-
-    fun exists(filename: String): Boolean {
-        return _tasks.any { it.filename == filename }
-    }
-
-    fun delete(filename: String): Boolean {
-        val index = _tasks.indexOfFirst { it.filename == filename }
-        if (index != -1) {
-            val task = _tasks[index]
-            removeFromIndex(task)
-            _tasks.removeAt(index)
-            onTaskChangedInMemory?.invoke(task, true)
-            onTaskDeleted?.invoke(task.filename, task)
+            mutationTrigger++
             return true
         }
         return false
     }
 
-    fun upsert(newTask: Task): Boolean {
-        val index = _tasks.indexOfFirst { it.filename == newTask.filename }
-        if (index != -1) {
-            val oldTask = _tasks[index]
-
-            removeFromIndex(oldTask)
-            _tasks[index] = newTask
-            addToIndex(newTask)
-
-            if (oldTask.toRaw() != newTask.toRaw()) {
-                onTaskChangedInMemory?.invoke(newTask, false)
-                return true
-            } else {
-                return false
-            }
-        } else {
-            _tasks.add(0, newTask)
-            addToIndex(newTask)
-            onTaskChangedInMemory?.invoke(newTask, false)
-            return true
+    fun delete(taskId: String): Boolean {
+        val task = getTaskById(taskId)
+        if (task != null) {
+            return delete(task)
         }
+        return false
     }
 
-    fun getTodaysTaskTitles(): List<String> {
+    fun exists(filename: String): Boolean {
+        return getTaskById(filename) != null
+    }
+
+    fun exists(task: Task): Boolean {
+        return exists(task.filename)
+    }
+
+    fun create(task: Task) {
+        val db = dbHelper.writableDatabase
+        db.insert("tasks", null, taskToContentValues(task))
+        mutationTrigger++
+        onTaskChangedInMemory?.invoke(task, false)
+    }
+
+    fun upsert(newTask: Task): Boolean {
+        if (!exists(newTask)) {
+            create(newTask)
+            return true
+        }
+
+        return update(newTask)
+    }
+
+    fun getTodayTasks(): List<Task> {
         val today = LocalDate.now()
-        return _tasksByDate[today]
-            ?.filter { !it.isDone && it.title.isNotBlank() }
-            ?.map { it.title }
-            ?: emptyList()
+        return getTasksForDate(today)
     }
 
     fun getTasksForDate(date: LocalDate): List<Task> {
-        return _tasksByDate[date]
-            ?.filter { !it.isDone }
-            ?: emptyList()
+        mutationTrigger
+        val db = dbHelper.readableDatabase
+        val dateString = date.toString() // ISO-8601 format
+
+        // Search for dates starting with the specified date string
+        val selection = "due_date LIKE ?"
+        val selectionArgs = arrayOf("$dateString%")
+
+        val cursor = db.query("tasks", null, selection, selectionArgs, null, null, "updated_at DESC")
+        val loadedTasks = mutableListOf<Task>()
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                val task = cursorToTask(c)
+                if (task != null) loadedTasks.add(task)
+            }
+        }
+        return loadedTasks
     }
 
     companion object {
@@ -159,5 +191,33 @@ class TaskRepository private constructor(context: Context) {
                 instance ?: TaskRepository(context).also { instance = it }
             }
         }
+    }
+}
+
+class TaskDbHelper(context: Context) : SQLiteOpenHelper(context, "tasks.db", null, 3) {
+    override fun onCreate(db: SQLiteDatabase) {
+        // todo: disk_last_update TEXT
+        db.execSQL("""
+            CREATE TABLE tasks (
+                filename TEXT,
+                title TEXT,
+                raw_content TEXT,
+                created_at TEXT,
+                updated_at TEXT,
+                due_date TEXT,
+                is_done INTEGER,
+                PRIMARY KEY (filename)
+            )
+        """.trimIndent())
+
+        db.execSQL("CREATE INDEX idx_tasks_created_at ON tasks(created_at)")
+        db.execSQL("CREATE INDEX idx_tasks_updated_at ON tasks(updated_at)")
+        db.execSQL("CREATE INDEX idx_tasks_due_date ON tasks(due_date)")
+        // todo: db.execSQL("CREATE INDEX idx_tasks_disk_last_update ON tasks(disk_last_update)")
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL("DROP TABLE IF EXISTS tasks")
+        onCreate(db)
     }
 }

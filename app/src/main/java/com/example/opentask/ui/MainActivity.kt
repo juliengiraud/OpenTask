@@ -263,7 +263,8 @@ fun OpenTaskApp(
         }
     }
 
-    if (activity.selectedTask != null) {
+    val currentTask = activity.selectedTask
+    if (currentTask != null) {
         val handleBack = {
             if (activity.isEditMode) {
                 activity.isEditMode = false
@@ -278,15 +279,15 @@ fun OpenTaskApp(
         }
         BackHandler(onBack = handleBack)
         NoteDetailScreen(
-            task = activity.selectedTask!!,
+            task = currentTask,
             isEditMode = activity.isEditMode,
             onEditModeChange = { activity.isEditMode = it },
-            onSave = { newContent ->
-                val currentId = activity.selectedTask?.filename ?: return@NoteDetailScreen
-                activity.repository.updateTask(currentId, newContent)
-                
+            onSave = { task ->
+                activity.repository.upsert(task)
+                if (activity.selectedTask?.filename == null) return@NoteDetailScreen
+
                 // Refresh selected task from repo or exit if deleted
-                val updatedTask = activity.repository.getTaskById(currentId)
+                val updatedTask = activity.repository.getTaskById(task.filename)
                 if (updatedTask == null) {
                     activity.selectedTask = null
                     activity.isEditMode = false

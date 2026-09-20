@@ -55,6 +55,10 @@ data class Task(
         return sb.toString()
     }
 
+    fun isEmpty(): Boolean {
+        return title.isBlank() && textContent.isBlank()
+    }
+
     companion object {
         private val filenameFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
 
@@ -80,19 +84,6 @@ data class Task(
             )
         }
 
-        /**
-         * Parses a raw Markdown string into a Task object.
-         *
-         * Parsing logic:
-         * - Extracts creation date from the filename if possible.
-         * - Parses YAML frontmatter for managed fields (done, due_date, etc.).
-         * - Skips blank lines after YAML to find the H1 title ('# ').
-         * - The body starts two lines after the title line (skipping one mandatory separator line)
-             except if the trimmed line bellow the title is not empty.
-         * - All whitespace within the body and the title are preserved.
-         * - **Auto-Title:** If the title is empty after parsing, it is inferred from the first
-         *   non-empty line of the body (textContent).
-         */
         fun fromRaw(filename: String, rawContent: String): Task {
             var createdAt = LocalDateTime.now()
             var lastUpdate = LocalDateTime.now()

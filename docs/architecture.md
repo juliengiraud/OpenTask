@@ -3,6 +3,9 @@
 ## Current Structure
 Single module Android application (`:app`), Kotlin + Jetpack Compose + Material3.
 
+## Data Persistence
+- `TaskRepository` uses a SQLite database (`tasks.db` managed via `TaskDbHelper`) to persist tasks across application launches.
+
 ## Layout Structure
 - `MainActivity` uses a standard `Scaffold`.
   - `MainBottomBar` → `bottomBar` slot

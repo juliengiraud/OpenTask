@@ -11,6 +11,7 @@ import android.text.SpannableString
 import android.text.style.AbsoluteSizeSpan
 import androidx.core.app.NotificationCompat
 import com.example.opentask.R
+import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
 import com.example.opentask.ui.PopupActivity
 
@@ -19,14 +20,14 @@ class AppNotificationManager(private val context: Context) {
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
     private val channelId = "task_channel_v7"
     private val foregroundId = 1
-    private var taskNames: List<String> = emptyList()
+    private var tasks: List<Task> = emptyList()
 
     init {
         createNotificationChannel()
     }
 
     fun start(service: Service) {
-        this.taskNames = TaskRepository.getInstance(context).getTodaysTaskTitles()
+        this.tasks = TaskRepository.getInstance(context).getTodayTasks()
         service.startForeground(foregroundId, getForegroundNotification())
     }
 
@@ -55,9 +56,13 @@ class AppNotificationManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val taskCount = taskNames.size
-        val joinedNames = if (taskNames.isEmpty()) "Pas de tâches pour aujourd'hui" else taskNames.joinToString(" / ")
-        val titleText = if (taskNames.isEmpty()) joinedNames else "[$taskCount] $joinedNames"
+        val taskCount = tasks.size
+        val joinedNames = if (tasks.isEmpty()) {
+            "Pas de tâches pour aujourd'hui"
+        } else {
+            tasks.joinToString(" / ") { it.title }
+        }
+        val titleText = if (tasks.isEmpty()) joinedNames else "[$taskCount] $joinedNames"
         
         val spannableTitle = SpannableString(titleText).apply {
             // Standard title is ~16sp, aiming for ~14sp (roughly 2sp/dp smaller)
@@ -77,9 +82,9 @@ class AppNotificationManager(private val context: Context) {
             .build()
     }
 
-    fun updateForegroundNotification(newTaskNames: List<String>) {
-        if (this.taskNames == newTaskNames) return
-        this.taskNames = newTaskNames
+    fun updateForegroundNotification(newTasks: List<Task>) {
+        if (this.tasks == newTasks) return
+        this.tasks = newTasks
         notificationManager.notify(foregroundId, getForegroundNotification())
     }
 

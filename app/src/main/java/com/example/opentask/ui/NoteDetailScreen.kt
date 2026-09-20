@@ -48,6 +48,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.example.opentask.model.Task
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -55,7 +56,7 @@ fun NoteDetailScreen(
     task: Task,
     isEditMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
-    onSave: (String) -> Unit,
+    onSave: (Task) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -154,7 +155,11 @@ fun NoteDetailScreen(
     val bodyFocusRequester = remember { FocusRequester() }
 
     val handleSave = { bodyContent: String ->
-        val toSave = currentTaskState.copy(title = titleValue.text, textContent = bodyContent).toRaw()
+        val toSave = currentTaskState.copy(
+            title = titleValue.text,
+            textContent = bodyContent,
+            lastUpdate = LocalDateTime.now()
+        )
         onSave(toSave)
     }
 
