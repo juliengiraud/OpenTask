@@ -134,7 +134,7 @@ This project should replace the usage of ColorNote
   - [ ] options icon
   - [ ] create icon
   - [ ] same style
-- [ ] setup local sqlight database
+- [x] setup local sqlight database
 - [x] log execution time
 - [ ] rework folder selection
   - [ ] setup a default app folder, its our vault
@@ -143,9 +143,9 @@ This project should replace the usage of ColorNote
 - [ ] clean project structure
 - [x] display week number
 - [/] handeling data conflicts
-  - [ ] list trivial and non-trivial usecases
+  - [x] list trivial and non-trivial usecases
   - [ ] handle them one by one for title, yaml and content
-  - [ ] on file viewer / editor while deleted on disk
+  - [x] on file viewer / editor while deleted on disk
   - [x] schedule updates to prevent batch
     - Obsidian save on every character
     - syncthing delete then create then update files

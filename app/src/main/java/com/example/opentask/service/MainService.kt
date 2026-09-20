@@ -101,13 +101,14 @@ class MainService : Service() {
                 serviceScope.launch {
                     ensureWatcherInitialized()
                     folderWatcherManager?.setupWatcher(newFolderUri)
+                    repository.clear()
                     scanAndLoadFolderInternal(newFolderUri)
                 }
             }
             ACTION_RESET_WATCHER -> {
                 ensureWatcherInitialized()
                 folderWatcherManager?.reset()
-                repository.setTasks(emptyList())
+                repository.clear()
                 updateNotification()
             }
             else -> {
@@ -205,29 +206,38 @@ class MainService : Service() {
     private suspend fun scanAndLoadFolderInternal(folderUriString: String?) {
         if (folderUriString == null) return
         val startTime = System.currentTimeMillis()
-        // todo run batches to read files in another thread?
         // => tmp notes with only filename
-        // => add fs last updated
-        // => put notes in database, add columns to duplicate properties from raw_content
-        // 100 is good size for repo/ui commit
         // handle ui for loading states
-        // todo? static loading time to allow some smart content load first
         try {
             val files = listFiles(folderUriString, filenameRegex)
-            val queryDuration = System.currentTimeMillis() - startTime
+            val existingNotes = repository.getAllTasks().associateBy { it.filename }
+            val filesOnDiskNames = files.map { it.name }.toSet()
 
-            val loadedTasks = mutableListOf<Task>()
+            val newTasks = mutableListOf<Task>()
             for (file in files) {
+                val existingTask = existingNotes[file.name]
+                // If file exists in DB and timestamp matches, skip reading
+                if (file.lastUpdate == existingTask?.lastUpdateFs) {
+                    continue
+                }
+                // Otherwise, read content and update/create
                 file.getContent()?.let { content ->
-                    loadedTasks.add(Task.fromRaw(file.name, content, file.lastUpdate))
+                    newTasks.add(Task.fromRaw(file.name, content, file.lastUpdate))
                 }
             }
+
+            // Detect deleted files: Tasks in DB that are no longer on Disk
+            val deletedTasks = existingNotes.keys.filter { it !in filesOnDiskNames }
+            if (deletedTasks.isNotEmpty()) {
+                repository.delete(deletedTasks)
+            }
+
+            repository.upsert(newTasks)
 
             val totalDuration = System.currentTimeMillis() - startTime
             
             withContext(Dispatchers.Main) {
-                debugManager.log("MainService", "Folder scan complete: Loaded ${loadedTasks.size} notes in ${totalDuration}ms (query: ${queryDuration}ms)")
-                repository.setTasks(loadedTasks)
+                debugManager.log("MainService", "Folder scan complete: Loaded ${files.size} new notes in ${totalDuration}ms")
                 updateNotification()
             }
         } catch (e: Exception) {

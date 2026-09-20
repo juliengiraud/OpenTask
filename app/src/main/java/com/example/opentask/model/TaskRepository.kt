@@ -82,19 +82,9 @@ class TaskRepository private constructor(context: Context) {
         }
     }
 
-    fun setTasks(newTasks: List<Task>) {
+    fun clear() {
         val db = dbHelper.writableDatabase
-        db.transaction {
-            try {
-                delete("tasks", null, null)
-                newTasks.forEach { task ->
-                    val values = taskToContentValues(task)
-                    val inserted = insert("tasks", null, values)
-                    val test = inserted
-                }
-            } finally {
-            }
-        }
+        db.delete("tasks", null, null)
         mutationTrigger++
     }
 
@@ -138,6 +128,15 @@ class TaskRepository private constructor(context: Context) {
         return false
     }
 
+    fun delete(taskIds: List<String>) {
+        taskIds.forEach {
+            val task = getTaskById(it)
+            if (task != null) {
+                delete(task)
+            }
+        }
+    }
+
     fun exists(filename: String): Boolean {
         return getTaskById(filename) != null
     }
@@ -160,6 +159,19 @@ class TaskRepository private constructor(context: Context) {
         }
 
         return update(newTask)
+    }
+
+    fun upsert(tasks: List<Task>) {
+        val db = dbHelper.writableDatabase
+        db.transaction {
+            try {
+                tasks.forEach { task ->
+                    insert("tasks", null, taskToContentValues(task))
+                }
+            } finally {
+            }
+        }
+        mutationTrigger++
     }
 
     fun getTodayTasks(): List<Task> {
