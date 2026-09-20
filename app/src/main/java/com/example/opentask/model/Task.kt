@@ -14,7 +14,8 @@ data class Task(
     val lastUpdate: LocalDateTime = LocalDateTime.now(),
     val dueDate: LocalDateTime? = null,
     val isDone: Boolean = false,
-    val extraYaml: List<String> = emptyList()
+    val extraYaml: List<String> = emptyList(),
+    val lastUpdateFs: Long = 0
 ) {
     /**
      * Converts the task to its raw Obsidian-compatible Markdown format.
@@ -84,7 +85,7 @@ data class Task(
             )
         }
 
-        fun fromRaw(filename: String, rawContent: String): Task {
+        fun fromRaw(filename: String, rawContent: String, lastUpdateFs: Long = 0L): Task {
             var createdAt = LocalDateTime.now()
             var lastUpdate = LocalDateTime.now()
             try {
@@ -199,7 +200,8 @@ data class Task(
                 lastUpdate = lastUpdate,
                 extraYaml = extraYaml,
                 isDone = isDone,
-                dueDate = dueDate
+                dueDate = dueDate,
+                lastUpdateFs = lastUpdateFs
             )
         }
 
@@ -233,6 +235,13 @@ data class Task(
                 generateConflict(local.textContent, remote.textContent, separator = "\n")
             }
 
+            // LastUpdateFs merge
+            val mergedLastUpdateFs = if (local.lastUpdateFs > remote.lastUpdateFs) {
+                local.lastUpdateFs // should be impossible
+            } else {
+                remote.lastUpdateFs // 100% cases
+            }
+
             return remote.copy(
                 title = mergedTitle,
                 textContent = mergedBody,
@@ -240,7 +249,8 @@ data class Task(
                 lastUpdate = mergedLastUpdate,
                 dueDate = mergedDueDate,
                 isDone = mergedIsDone,
-                extraYaml = mergedExtraYaml
+                extraYaml = mergedExtraYaml,
+                lastUpdateFs = mergedLastUpdateFs
             )
         }
     }

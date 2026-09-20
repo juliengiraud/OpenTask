@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.IBinder
 import androidx.core.net.toUri
 import android.provider.DocumentsContract
+import androidx.documentfile.provider.DocumentFile
 import com.example.opentask.model.Task
 import com.example.opentask.model.TaskRepository
 import com.example.opentask.util.KWatchEventKind
@@ -147,7 +148,7 @@ class MainService : Service() {
         repository.onTaskChangedInMemory = null
     }
 
-    inner class DocFile(val name: String, val uri: Uri) {
+    inner class DocFile(val name: String, val uri: Uri, val lastUpdate: Long) {
         fun getContent(): String? = fileStorageManager.readFileContent(uri)
     }
 
@@ -158,26 +159,30 @@ class MainService : Service() {
 
         val projection = arrayOf(
             DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED
         )
 
         val files = mutableListOf<DocFile>()
 
         val cursor = contentResolver.query(childrenUri, projection, null, null, null)
         cursor?.use { c ->
-            val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
             val idIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+            val nameIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            val lastUpdateIndex = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
 
             if (nameIndex != -1 && idIndex != -1) {
                 while (c.moveToNext()) {
+                    val docId = c.getString(idIndex)
                     val name = c.getString(nameIndex) ?: continue
+                    val lastUpdate = c.getLong(lastUpdateIndex)
+
+                    if (updatedAfter != null && lastUpdate < updatedAfter) continue
 
                     if (nameRegex != null && !nameRegex.matches(name)) continue
-                    // todo: implement updatedAfter check using DocumentsContract.Document.COLUMN_LAST_MODIFIED
 
-                    val docId = c.getString(idIndex)
                     val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                    files.add(DocFile(name, fileUri))
+                    files.add(DocFile(name, fileUri, lastUpdate))
                 }
             }
         }
@@ -185,11 +190,11 @@ class MainService : Service() {
         return files
     }
 
-    private fun getFile(folderUriString: String, filename: String): DocFile {
+    private fun getFile(folderUriString: String, filename: String): DocFile? {
         val treeUri = folderUriString.toUri()
-        val treeId = DocumentsContract.getTreeDocumentId(treeUri)
-        val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, "$treeId/$filename")
-        return DocFile(filename, fileUri)
+        val rootFolder = DocumentFile.fromTreeUri(this, treeUri) ?: return null
+        val file = rootFolder.findFile(filename) ?: return null
+        return DocFile(filename, file.uri, file.lastModified())
     }
 
     fun getFolderPath(folderUriString: String): String {
@@ -214,7 +219,7 @@ class MainService : Service() {
             val loadedTasks = mutableListOf<Task>()
             for (file in files) {
                 file.getContent()?.let { content ->
-                    loadedTasks.add(Task.fromRaw(file.name, content))
+                    loadedTasks.add(Task.fromRaw(file.name, content, file.lastUpdate))
                 }
             }
 
@@ -247,10 +252,10 @@ class MainService : Service() {
             }
 
             // For CREATED and MODIFIED, find and re-read the file
-            val file = getFile(folderUriString, filename)
+            val file = getFile(folderUriString, filename) ?: return
             val content = file.getContent()
             if (content != null) {
-                val externalTask = Task.fromRaw(filename, content)
+                val externalTask = Task.fromRaw(filename, content, file.lastUpdate)
                 if (repository.upsert(externalTask)) {
                     debugManager.log("MainService", "External Change: Synchronized note $filename with memory")
                 }

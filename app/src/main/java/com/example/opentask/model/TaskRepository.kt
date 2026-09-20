@@ -28,10 +28,13 @@ class TaskRepository private constructor(context: Context) {
         try {
             val filenameIdx = cursor.getColumnIndex("filename")
             val rawContentIdx = cursor.getColumnIndex("raw_content")
+            val lastUpdateFsIdx = cursor.getColumnIndex("last_update_fs")
 
             val filename = cursor.getString(filenameIdx) ?: ""
             val rawContent = cursor.getString(rawContentIdx) ?: ""
-            val task = Task.fromRaw(filename, rawContent)
+            val lastUpdateFs = if (lastUpdateFsIdx != -1) cursor.getLong(lastUpdateFsIdx) else 0L
+            
+            val task = Task.fromRaw(filename, rawContent, lastUpdateFs)
             return task
         } catch (_: Exception) {
             return null
@@ -47,6 +50,7 @@ class TaskRepository private constructor(context: Context) {
             put("updated_at", task.lastUpdate.toString())
             put("due_date", task.dueDate?.toString())
             put("is_done", if (task.isDone) 1 else 0)
+            put("last_update_fs", task.lastUpdateFs)
         }
     }
 
@@ -96,7 +100,7 @@ class TaskRepository private constructor(context: Context) {
 
     fun update(taskId: String, newRawContent: String): Boolean {
         val oldTask = getTaskById(taskId) ?: return false
-        val newTask = Task.fromRaw(taskId, newRawContent)
+        val newTask = Task.fromRaw(taskId, newRawContent, oldTask.lastUpdateFs)
 
         if (newTask.isEmpty()) return delete(oldTask)
 
@@ -194,9 +198,8 @@ class TaskRepository private constructor(context: Context) {
     }
 }
 
-class TaskDbHelper(context: Context) : SQLiteOpenHelper(context, "tasks.db", null, 3) {
+class TaskDbHelper(context: Context) : SQLiteOpenHelper(context, "tasks.db", null, 4) {
     override fun onCreate(db: SQLiteDatabase) {
-        // todo: disk_last_update TEXT
         db.execSQL("""
             CREATE TABLE tasks (
                 filename TEXT,
@@ -206,6 +209,7 @@ class TaskDbHelper(context: Context) : SQLiteOpenHelper(context, "tasks.db", nul
                 updated_at TEXT,
                 due_date TEXT,
                 is_done INTEGER,
+                last_update_fs INTEGER,
                 PRIMARY KEY (filename)
             )
         """.trimIndent())
@@ -213,7 +217,7 @@ class TaskDbHelper(context: Context) : SQLiteOpenHelper(context, "tasks.db", nul
         db.execSQL("CREATE INDEX idx_tasks_created_at ON tasks(created_at)")
         db.execSQL("CREATE INDEX idx_tasks_updated_at ON tasks(updated_at)")
         db.execSQL("CREATE INDEX idx_tasks_due_date ON tasks(due_date)")
-        // todo: db.execSQL("CREATE INDEX idx_tasks_disk_last_update ON tasks(disk_last_update)")
+        db.execSQL("CREATE INDEX idx_tasks_last_update_fs ON tasks(last_update_fs)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {

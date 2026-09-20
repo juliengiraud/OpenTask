@@ -91,7 +91,7 @@ fun NoteDetailScreen(
             
             val initialBody = initialTask.textContent
             val remoteBody = task.textContent
-            val localBody = if (isParsedMode) currentContent else Task.fromRaw(task.filename, currentContent).textContent
+            val localBody = if (isParsedMode) currentContent else Task.fromRaw(task.filename, currentContent, task.lastUpdateFs).textContent
             
             val initialTitle = initialTask.title
             val remoteTitle = task.title
@@ -110,7 +110,7 @@ fun NoteDetailScreen(
                 val localTask = if (isParsedMode) {
                     initialTask.copy(title = localTitle, textContent = localBody)
                 } else {
-                    Task.fromRaw(task.filename, currentContent)
+                    Task.fromRaw(task.filename, currentContent, task.lastUpdateFs)
                 }
                 
                 val mergedTask = Task.merge(initialTask, localTask, task)
@@ -308,7 +308,7 @@ fun NoteDetailScreen(
                     onCheckedChange = { checked ->
                         if (checked) {
                             // Raw -> Parsed
-                            val newTask = Task.fromRaw(task.filename, textFieldValue.text)
+                            val newTask = Task.fromRaw(task.filename, textFieldValue.text, currentTaskState.lastUpdateFs)
                             currentTaskState = newTask
                             textFieldValue = TextFieldValue(newTask.textContent)
                             titleValue = TextFieldValue(newTask.title)
